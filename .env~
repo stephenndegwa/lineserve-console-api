@@ -1,0 +1,3 @@
+JWT_SECRET=your-jwt-secret-key
+OS_IDENTITY_API_VERSION=3
+JWT_SECRET=your-jwt-secret-key
