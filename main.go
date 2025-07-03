@@ -50,6 +50,16 @@ func main() {
 	}
 	fmt.Printf("Main: Using JWT secret: %s\n", jwtSecret)
 
+	// Serve Swagger documentation
+	app.Get("/docs/swagger.json", func(c *fiber.Ctx) error {
+		return c.SendFile("./docs/swagger.json")
+	})
+
+	// Serve Swagger UI
+	app.Get("/docs", func(c *fiber.Ctx) error {
+		return c.SendFile("./docs/index.html")
+	})
+
 	// Create API group with version
 	v1 := app.Group("/v1")
 
@@ -95,7 +105,7 @@ func main() {
 		return c.JSON(fiber.Map{
 			"name":    "Lineserve API",
 			"version": "1.0.0",
-			"docs":    "/v1",
+			"docs":    "/docs",
 		})
 	})
 

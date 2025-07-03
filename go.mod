@@ -2,8 +2,6 @@ module github.com/lineserve/lineserve-api
 
 go 1.22
 
-toolchain go1.24.4
-
 require (
 	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/golang-jwt/jwt/v5 v5.2.2
