@@ -1,0 +1,6 @@
+{
+  "name": "test-instance",
+  "flavor_id": "42",
+  "image_id": "8cd70853-69c2-4955-8e3f-61e5e4939191",
+  "network_id": "ac24ba17-0eba-400e-a632-1a589d67673d"
+}
