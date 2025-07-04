@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
@@ -24,8 +25,15 @@ func NewNetworkService(client *client.OpenStackClient) *NetworkService {
 
 // ListNetworks lists all networks
 func (s *NetworkService) ListNetworks() ([]models.Network, error) {
-	var modelNetworks []models.Network
+	// Initialize with empty slice instead of nil
+	modelNetworks := []models.Network{}
 	ctx := context.Background()
+
+	// Check if Network client is nil
+	if s.Client == nil || s.Client.Network == nil {
+		fmt.Println("ERROR: Network client is nil")
+		return modelNetworks, fmt.Errorf("network client is nil")
+	}
 
 	// Create a pager
 	listOpts := networks.ListOpts{}
@@ -36,8 +44,11 @@ func (s *NetworkService) ListNetworks() ([]models.Network, error) {
 		// Extract basic network info
 		networkList, err := networks.ExtractNetworks(page)
 		if err != nil {
+			fmt.Printf("ERROR extracting networks: %v\n", err)
 			return false, err
 		}
+
+		fmt.Printf("Found %d networks in page\n", len(networkList))
 
 		// Extract networks with external extension info
 		var networkWithExtList []struct {
@@ -47,6 +58,7 @@ func (s *NetworkService) ListNetworks() ([]models.Network, error) {
 
 		err = networks.ExtractNetworksInto(page, &networkWithExtList)
 		if err != nil {
+			fmt.Printf("ERROR extracting external network info: %v\n", err)
 			// If we can't extract external info, continue with basic info
 			for _, network := range networkList {
 				modelNetwork := models.Network{
@@ -59,6 +71,7 @@ func (s *NetworkService) ListNetworks() ([]models.Network, error) {
 				modelNetworks = append(modelNetworks, modelNetwork)
 			}
 		} else {
+			fmt.Printf("Successfully extracted %d networks with external info\n", len(networkWithExtList))
 			// Use the extracted external info
 			for _, network := range networkWithExtList {
 				modelNetwork := models.Network{
@@ -76,9 +89,11 @@ func (s *NetworkService) ListNetworks() ([]models.Network, error) {
 	})
 
 	if err != nil {
+		fmt.Printf("ERROR in pager.EachPage: %v\n", err)
 		return nil, err
 	}
 
+	fmt.Printf("Returning %d networks\n", len(modelNetworks))
 	return modelNetworks, nil
 }
 

@@ -278,6 +278,21 @@ func main() {
 		})
 	})
 
+	// Add a test endpoint to check OpenStack client status
+	app.Get("/api/v1/openstack-status", func(c *fiber.Ctx) error {
+		status := map[string]interface{}{
+			"openstack_client": openStackClient != nil,
+			"services": map[string]interface{}{
+				"compute":  openStackClient != nil && openStackClient.Compute != nil,
+				"network":  openStackClient != nil && openStackClient.Network != nil,
+				"image":    openStackClient != nil && openStackClient.Image != nil,
+				"volume":   openStackClient != nil && openStackClient.Volume != nil,
+				"identity": openStackClient != nil && openStackClient.Identity != nil,
+			},
+		}
+		return c.JSON(status)
+	})
+
 	// Start server
 	port := cfg.APIPort
 	if port == "" {

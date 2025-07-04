@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/lineserve/lineserve-api/internal/services"
 	"github.com/lineserve/lineserve-api/pkg/client"
@@ -21,8 +23,11 @@ func NewNetworkHandler(client *client.OpenStackClient) *NetworkHandler {
 
 // ListNetworks handles listing all networks
 func (h *NetworkHandler) ListNetworks(c *fiber.Ctx) error {
+	fmt.Println("ListNetworks handler called")
+
 	// Check if OpenStack client is available
 	if h.Client == nil || h.Client.Network == nil {
+		fmt.Println("ERROR: OpenStack network service unavailable")
 		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
 			Error: "OpenStack network service unavailable",
 		})
@@ -34,9 +39,17 @@ func (h *NetworkHandler) ListNetworks(c *fiber.Ctx) error {
 	// Get networks
 	networks, err := networkService.ListNetworks()
 	if err != nil {
+		fmt.Printf("ERROR in networkService.ListNetworks: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
 			Error: "Failed to list networks: " + err.Error(),
 		})
+	}
+
+	fmt.Printf("Handler received %d networks\n", len(networks))
+
+	// Ensure we return an empty array instead of null
+	if networks == nil {
+		networks = []models.Network{}
 	}
 
 	// Return networks
