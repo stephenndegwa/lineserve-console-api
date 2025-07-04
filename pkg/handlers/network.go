@@ -21,6 +21,13 @@ func NewNetworkHandler(client *client.OpenStackClient) *NetworkHandler {
 
 // ListNetworks handles listing all networks
 func (h *NetworkHandler) ListNetworks(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Network == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack network service unavailable",
+		})
+	}
+
 	// Create network service
 	networkService := services.NewNetworkService(h.Client)
 
@@ -36,8 +43,54 @@ func (h *NetworkHandler) ListNetworks(c *fiber.Ctx) error {
 	return c.JSON(networks)
 }
 
+// CreateNetwork handles creating a new network
+func (h *NetworkHandler) CreateNetwork(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Network == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack network service unavailable",
+		})
+	}
+
+	// Parse request body
+	var req models.CreateNetworkRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid request body",
+		})
+	}
+
+	// Validate request
+	if req.Name == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Name is required",
+		})
+	}
+
+	// Create network service
+	networkService := services.NewNetworkService(h.Client)
+
+	// Create network
+	network, err := networkService.CreateNetwork(req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to create network: " + err.Error(),
+		})
+	}
+
+	// Return network
+	return c.Status(fiber.StatusCreated).JSON(network)
+}
+
 // GetNetwork handles getting a network by ID
 func (h *NetworkHandler) GetNetwork(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Network == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack network service unavailable",
+		})
+	}
+
 	// Get network ID
 	id := c.Params("id")
 	if id == "" {
@@ -59,4 +112,38 @@ func (h *NetworkHandler) GetNetwork(c *fiber.Ctx) error {
 
 	// Return network
 	return c.JSON(network)
+}
+
+// DeleteNetwork handles deleting a network by ID
+func (h *NetworkHandler) DeleteNetwork(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Network == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack network service unavailable",
+		})
+	}
+
+	// Get network ID
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Network ID is required",
+		})
+	}
+
+	// Create network service
+	networkService := services.NewNetworkService(h.Client)
+
+	// Delete network
+	err := networkService.DeleteNetwork(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to delete network: " + err.Error(),
+		})
+	}
+
+	// Return success
+	return c.Status(fiber.StatusOK).JSON(models.SuccessResponse{
+		Message: "Network deleted successfully",
+	})
 }

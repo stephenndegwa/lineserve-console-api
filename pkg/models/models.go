@@ -84,6 +84,11 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// SuccessResponse represents a success response
+type SuccessResponse struct {
+	Message string `json:"message"`
+}
+
 // TokenClaims represents the claims in a JWT token
 type TokenClaims struct {
 	UserID    string `json:"user_id"`
@@ -150,6 +155,14 @@ type Network struct {
 	External bool   `json:"external"`
 }
 
+// CreateNetworkRequest represents a request to create a network
+type CreateNetworkRequest struct {
+	Name         string `json:"name"`
+	Shared       bool   `json:"shared"`
+	External     bool   `json:"external"`
+	AdminStateUp bool   `json:"admin_state_up"`
+}
+
 // VolumeAttachment represents a volume attachment
 type VolumeAttachment struct {
 	ServerID     string `json:"server_id"`
@@ -167,6 +180,14 @@ type Volume struct {
 	AvailabilityZone string             `json:"availability_zone"`
 	CreatedAt        time.Time          `json:"created_at"`
 	Attachments      []VolumeAttachment `json:"attachments"`
+}
+
+// VolumeType represents a volume type
+type VolumeType struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	IsPublic    bool   `json:"is_public"`
 }
 
 // CreateVolumeRequest represents a request to create a volume

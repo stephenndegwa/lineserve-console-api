@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/external"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/pagination"
 	"github.com/lineserve/lineserve-api/pkg/client"
@@ -38,11 +39,13 @@ func (s *NetworkService) ListNetworks() ([]models.Network, error) {
 
 		for _, network := range networkList {
 			// Check if network has router:external attribute
-			isExternal := false
+			var externalNetwork external.NetworkExternalExt
+			err := networks.ExtractInto(page, &externalNetwork)
 
-			// Look for router:external in the network properties
-			if network.AdminStateUp {
-				isExternal = true
+			// Default to false if we can't determine
+			isExternal := false
+			if err == nil {
+				isExternal = externalNetwork.External
 			}
 
 			modelNetwork := models.Network{
@@ -71,17 +74,22 @@ func (s *NetworkService) GetNetwork(id string) (*models.Network, error) {
 	ctx := context.Background()
 
 	// Get the network
-	network, err := networks.Get(ctx, s.Client.Network, id).Extract()
+	r := networks.Get(ctx, s.Client.Network, id)
+
+	// Extract the basic network information
+	network, err := r.Extract()
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if network has router:external attribute
-	isExternal := false
+	// Try to extract the external attribute
+	var externalNetwork external.NetworkExternalExt
+	err = r.ExtractInto(&externalNetwork)
 
-	// Look for router:external in the network properties
-	if network.AdminStateUp {
-		isExternal = true
+	// Default to false if we can't determine
+	isExternal := false
+	if err == nil {
+		isExternal = externalNetwork.External
 	}
 
 	// Return the network
@@ -94,4 +102,50 @@ func (s *NetworkService) GetNetwork(id string) (*models.Network, error) {
 	}
 
 	return modelNetwork, nil
+}
+
+// CreateNetwork creates a new network
+func (s *NetworkService) CreateNetwork(req models.CreateNetworkRequest) (*models.Network, error) {
+	ctx := context.Background()
+
+	// Define network create options
+	createOpts := networks.CreateOpts{
+		Name:         req.Name,
+		AdminStateUp: &req.AdminStateUp,
+		Shared:       &req.Shared,
+	}
+
+	// Add external network extension if requested
+	var createOptsBuilder networks.CreateOptsBuilder = createOpts
+	if req.External {
+		createOptsBuilder = external.CreateOptsExt{
+			CreateOptsBuilder: createOpts,
+			External:          true,
+		}
+	}
+
+	// Create the network
+	network, err := networks.Create(ctx, s.Client.Network, createOptsBuilder).Extract()
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the network
+	modelNetwork := &models.Network{
+		ID:       network.ID,
+		Name:     network.Name,
+		Status:   network.Status,
+		Shared:   network.Shared,
+		External: req.External, // Use the requested value since it may not be immediately reflected
+	}
+
+	return modelNetwork, nil
+}
+
+// DeleteNetwork deletes a network by ID
+func (s *NetworkService) DeleteNetwork(id string) error {
+	ctx := context.Background()
+
+	// Delete the network
+	return networks.Delete(ctx, s.Client.Network, id).ExtractErr()
 }

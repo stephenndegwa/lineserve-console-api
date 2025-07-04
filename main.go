@@ -147,6 +147,14 @@ func main() {
 		}
 		return networkHandler.ListNetworks(c)
 	})
+	projectScoped.Post("/networks", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return networkHandler.CreateNetwork(c)
+	})
 	projectScoped.Get("/networks/:id", func(c *fiber.Ctx) error {
 		if openStackClient == nil {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
@@ -154,6 +162,14 @@ func main() {
 			})
 		}
 		return networkHandler.GetNetwork(c)
+	})
+	projectScoped.Delete("/networks/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return networkHandler.DeleteNetwork(c)
 	})
 
 	// Volume routes
@@ -180,6 +196,22 @@ func main() {
 			})
 		}
 		return volumeHandler.GetVolume(c)
+	})
+	projectScoped.Delete("/volumes/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return volumeHandler.DeleteVolume(c)
+	})
+	projectScoped.Get("/volume-types", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return volumeHandler.ListVolumeTypes(c)
 	})
 
 	// Project routes

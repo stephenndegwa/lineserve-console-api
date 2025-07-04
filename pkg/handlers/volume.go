@@ -21,6 +21,13 @@ func NewVolumeHandler(client *client.OpenStackClient) *VolumeHandler {
 
 // ListVolumes handles listing all volumes
 func (h *VolumeHandler) ListVolumes(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Volume == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack volume service unavailable",
+		})
+	}
+
 	// Create volume service
 	volumeService := services.NewVolumeService(h.Client)
 
@@ -36,8 +43,39 @@ func (h *VolumeHandler) ListVolumes(c *fiber.Ctx) error {
 	return c.JSON(volumes)
 }
 
+// ListVolumeTypes handles listing all volume types
+func (h *VolumeHandler) ListVolumeTypes(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Volume == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack volume service unavailable",
+		})
+	}
+
+	// Create volume service
+	volumeService := services.NewVolumeService(h.Client)
+
+	// Get volume types
+	volumeTypes, err := volumeService.ListVolumeTypes()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to list volume types: " + err.Error(),
+		})
+	}
+
+	// Return volume types
+	return c.JSON(volumeTypes)
+}
+
 // CreateVolume handles creating a new volume
 func (h *VolumeHandler) CreateVolume(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Volume == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack volume service unavailable",
+		})
+	}
+
 	// Parse request body
 	var req models.CreateVolumeRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -75,6 +113,13 @@ func (h *VolumeHandler) CreateVolume(c *fiber.Ctx) error {
 
 // GetVolume handles getting a volume by ID
 func (h *VolumeHandler) GetVolume(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Volume == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack volume service unavailable",
+		})
+	}
+
 	// Get volume ID
 	id := c.Params("id")
 	if id == "" {
@@ -96,4 +141,38 @@ func (h *VolumeHandler) GetVolume(c *fiber.Ctx) error {
 
 	// Return volume
 	return c.JSON(volume)
+}
+
+// DeleteVolume handles deleting a volume by ID
+func (h *VolumeHandler) DeleteVolume(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Volume == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack volume service unavailable",
+		})
+	}
+
+	// Get volume ID
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Volume ID is required",
+		})
+	}
+
+	// Create volume service
+	volumeService := services.NewVolumeService(h.Client)
+
+	// Delete volume
+	err := volumeService.DeleteVolume(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to delete volume: " + err.Error(),
+		})
+	}
+
+	// Return success
+	return c.Status(fiber.StatusOK).JSON(models.SuccessResponse{
+		Message: "Volume deleted successfully",
+	})
 }

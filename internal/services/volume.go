@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gophercloud/gophercloud/v2/openstack/blockstorage/v3/volumes"
+	"github.com/gophercloud/gophercloud/v2/openstack/blockstorage/v3/volumetypes"
 	"github.com/gophercloud/gophercloud/v2/pagination"
 	"github.com/lineserve/lineserve-api/pkg/client"
 	"github.com/lineserve/lineserve-api/pkg/models"
@@ -139,4 +140,48 @@ func (s *VolumeService) GetVolume(id string) (*models.Volume, error) {
 	}
 
 	return modelVolume, nil
+}
+
+// DeleteVolume deletes a volume by ID
+func (s *VolumeService) DeleteVolume(id string) error {
+	ctx := context.Background()
+
+	// Delete the volume
+	return volumes.Delete(ctx, s.Client.Volume, id, volumes.DeleteOpts{}).ExtractErr()
+}
+
+// ListVolumeTypes lists all volume types
+func (s *VolumeService) ListVolumeTypes() ([]models.VolumeType, error) {
+	var modelVolumeTypes []models.VolumeType
+	ctx := context.Background()
+
+	// Create a pager
+	pager := volumetypes.List(s.Client.Volume, volumetypes.ListOpts{})
+
+	// Extract volume types from pages
+	err := pager.EachPage(ctx, func(ctx context.Context, page pagination.Page) (bool, error) {
+		volumeTypeList, err := volumetypes.ExtractVolumeTypes(page)
+		if err != nil {
+			return false, err
+		}
+
+		for _, volumeType := range volumeTypeList {
+			modelVolumeType := models.VolumeType{
+				ID:          volumeType.ID,
+				Name:        volumeType.Name,
+				Description: volumeType.Description,
+				IsPublic:    volumeType.IsPublic,
+			}
+
+			modelVolumeTypes = append(modelVolumeTypes, modelVolumeType)
+		}
+
+		return true, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return modelVolumeTypes, nil
 }

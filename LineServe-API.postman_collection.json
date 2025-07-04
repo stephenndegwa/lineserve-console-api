@@ -1,0 +1,612 @@
+{
+	"info": {
+		"_postman_id": "b5e7b5f0-1b5a-4e5c-8c5a-7f1e5c5e5c5a",
+		"name": "LineServe API",
+		"description": "A comprehensive collection for the LineServe API, which provides cloud infrastructure management capabilities through OpenStack.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "Endpoints for user authentication and registration",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"user@example.com\",\n    \"phone\": \"+254712345678\",\n    \"password\": \"StrongPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"register"
+							]
+						},
+						"description": "Register a new user with LineServe. The user will be created in both the local database and OpenStack."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.token) {",
+									"    pm.environment.set(\"authToken\", jsonData.token);",
+									"    pm.environment.set(\"userId\", jsonData.user_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"user@example.com\",\n    \"password\": \"StrongPassword123!\",\n    \"domain_name\": \"Default\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"login"
+							]
+						},
+						"description": "Login with username and password to get an authentication token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData && jsonData.token) {",
+									"    pm.environment.set(\"projectToken\", jsonData.token);",
+									"    pm.environment.set(\"projectId\", jsonData.project_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"user@example.com\",\n    \"password\": \"StrongPassword123!\",\n    \"domain_name\": \"Default\",\n    \"project_id\": \"{{projectId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/project-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"project-token"
+							]
+						},
+						"description": "Get a project-scoped token for accessing project resources."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Projects",
+			"description": "Endpoints for managing projects",
+			"item": [
+				{
+					"name": "List Projects",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/projects",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"projects"
+							]
+						},
+						"description": "List all projects accessible to the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/projects/{{projectId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"projects",
+								"{{projectId}}"
+							]
+						},
+						"description": "Get details of a specific project."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Instances",
+			"description": "Endpoints for managing compute instances",
+			"item": [
+				{
+					"name": "List Instances",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/instances",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"instances"
+							]
+						},
+						"description": "List all compute instances in the project."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Instance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"test-instance\",\n    \"flavor_id\": \"{{flavorId}}\",\n    \"image_id\": \"{{imageId}}\",\n    \"network_id\": \"{{networkId}}\",\n    \"key_name\": \"my-key\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/instances",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"instances"
+							]
+						},
+						"description": "Create a new compute instance."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Instance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/instances/{{instanceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"instances",
+								"{{instanceId}}"
+							]
+						},
+						"description": "Get details of a specific compute instance."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Images",
+			"description": "Endpoints for managing images",
+			"item": [
+				{
+					"name": "List Images",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/images",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"images"
+							]
+						},
+						"description": "List all images available in the project."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Image",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/images/{{imageId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"images",
+								"{{imageId}}"
+							]
+						},
+						"description": "Get details of a specific image."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Flavors",
+			"description": "Endpoints for managing flavors",
+			"item": [
+				{
+					"name": "List Flavors",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/flavors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"flavors"
+							]
+						},
+						"description": "List all flavors available in the project."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Networks",
+			"description": "Endpoints for managing networks",
+			"item": [
+				{
+					"name": "List Networks",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/networks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"networks"
+							]
+						},
+						"description": "List all networks available in the project."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Network",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/networks/{{networkId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"networks",
+								"{{networkId}}"
+							]
+						},
+						"description": "Get details of a specific network."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Volumes",
+			"description": "Endpoints for managing volumes",
+			"item": [
+				{
+					"name": "List Volumes",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/volumes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"volumes"
+							]
+						},
+						"description": "List all volumes in the project."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Volume",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"test-volume\",\n    \"size\": 10,\n    \"volume_type\": \"standard\",\n    \"availability_zone\": \"nova\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/volumes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"volumes"
+							]
+						},
+						"description": "Create a new volume."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Volume",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/volumes/{{volumeId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"volumes",
+								"{{volumeId}}"
+							]
+						},
+						"description": "Get details of a specific volume."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "API Info",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						""
+					]
+				},
+				"description": "Get basic information about the API."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string",
+			"description": "Base URL for the API"
+		}
+	]
+} 
