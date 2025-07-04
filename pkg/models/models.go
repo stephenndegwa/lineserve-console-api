@@ -190,6 +190,22 @@ type VolumeType struct {
 	IsPublic    bool   `json:"is_public"`
 }
 
+// KeyPair represents an SSH key pair
+type KeyPair struct {
+	Name        string `json:"name"`
+	Fingerprint string `json:"fingerprint"`
+	PublicKey   string `json:"public_key"`
+	PrivateKey  string `json:"private_key,omitempty"`
+	UserID      string `json:"user_id,omitempty"`
+	Type        string `json:"type,omitempty"`
+}
+
+// CreateKeyPairRequest represents a request to create a key pair
+type CreateKeyPairRequest struct {
+	Name      string `json:"name" binding:"required"`
+	PublicKey string `json:"public_key,omitempty"`
+}
+
 // CreateVolumeRequest represents a request to create a volume
 type CreateVolumeRequest struct {
 	Name             string `json:"name"`

@@ -28,35 +28,48 @@ func (s *NetworkService) ListNetworks() ([]models.Network, error) {
 	ctx := context.Background()
 
 	// Create a pager
-	pager := networks.List(s.Client.Network, networks.ListOpts{})
+	listOpts := networks.ListOpts{}
+	pager := networks.List(s.Client.Network, listOpts)
 
 	// Extract networks from pages
 	err := pager.EachPage(ctx, func(ctx context.Context, page pagination.Page) (bool, error) {
+		// Extract basic network info
 		networkList, err := networks.ExtractNetworks(page)
 		if err != nil {
 			return false, err
 		}
 
-		for _, network := range networkList {
-			// Check if network has router:external attribute
-			var externalNetwork external.NetworkExternalExt
-			err := networks.ExtractInto(page, &externalNetwork)
+		// Extract networks with external extension info
+		var networkWithExtList []struct {
+			networks.Network
+			external.NetworkExternalExt
+		}
 
-			// Default to false if we can't determine
-			isExternal := false
-			if err == nil {
-				isExternal = externalNetwork.External
+		err = networks.ExtractNetworksInto(page, &networkWithExtList)
+		if err != nil {
+			// If we can't extract external info, continue with basic info
+			for _, network := range networkList {
+				modelNetwork := models.Network{
+					ID:       network.ID,
+					Name:     network.Name,
+					Status:   network.Status,
+					Shared:   network.Shared,
+					External: false, // Default to false if we can't determine
+				}
+				modelNetworks = append(modelNetworks, modelNetwork)
 			}
-
-			modelNetwork := models.Network{
-				ID:       network.ID,
-				Name:     network.Name,
-				Status:   network.Status,
-				Shared:   network.Shared,
-				External: isExternal,
+		} else {
+			// Use the extracted external info
+			for _, network := range networkWithExtList {
+				modelNetwork := models.Network{
+					ID:       network.ID,
+					Name:     network.Name,
+					Status:   network.Status,
+					Shared:   network.Shared,
+					External: network.External,
+				}
+				modelNetworks = append(modelNetworks, modelNetwork)
 			}
-
-			modelNetworks = append(modelNetworks, modelNetwork)
 		}
 
 		return true, nil
@@ -76,29 +89,25 @@ func (s *NetworkService) GetNetwork(id string) (*models.Network, error) {
 	// Get the network
 	r := networks.Get(ctx, s.Client.Network, id)
 
-	// Extract the basic network information
-	network, err := r.Extract()
+	// Create a struct to hold both network and external extension info
+	var networkWithExt struct {
+		networks.Network
+		external.NetworkExternalExt
+	}
+
+	// Extract into the combined struct
+	err := r.ExtractInto(&networkWithExt)
 	if err != nil {
 		return nil, err
 	}
 
-	// Try to extract the external attribute
-	var externalNetwork external.NetworkExternalExt
-	err = r.ExtractInto(&externalNetwork)
-
-	// Default to false if we can't determine
-	isExternal := false
-	if err == nil {
-		isExternal = externalNetwork.External
-	}
-
 	// Return the network
 	modelNetwork := &models.Network{
-		ID:       network.ID,
-		Name:     network.Name,
-		Status:   network.Status,
-		Shared:   network.Shared,
-		External: isExternal,
+		ID:       networkWithExt.ID,
+		Name:     networkWithExt.Name,
+		Status:   networkWithExt.Status,
+		Shared:   networkWithExt.Shared,
+		External: networkWithExt.External,
 	}
 
 	return modelNetwork, nil
@@ -118,9 +127,11 @@ func (s *NetworkService) CreateNetwork(req models.CreateNetworkRequest) (*models
 	// Add external network extension if requested
 	var createOptsBuilder networks.CreateOptsBuilder = createOpts
 	if req.External {
+		// Convert bool to *bool for the external extension
+		externalBool := req.External
 		createOptsBuilder = external.CreateOptsExt{
-			CreateOptsBuilder: createOpts,
-			External:          true,
+			CreateOptsBuilder: createOptsBuilder,
+			External:          &externalBool,
 		}
 	}
 

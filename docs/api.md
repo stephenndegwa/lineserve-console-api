@@ -259,60 +259,63 @@ Returns a list of all flavors.
 
 ## Networks
 
+- `GET /api/v1/networks` - List all networks
+- `GET /api/v1/networks/:id` - Get network details
+- `POST /api/v1/networks` - Create a new network
+- `DELETE /api/v1/networks/:id` - Delete a network
+
 ### List Networks
 
-Returns a list of all networks.
+**Curl Example:**
 
-**URL**: `/api/networks`
-
-**Method**: `GET`
-
-**Auth required**: Yes (JWT)
-
-**Success Response**:
-
-- **Code**: 200 OK
-- **Content**:
-
-```json
-[
-  {
-    "id": "string",
-    "name": "string",
-    "status": "string",
-    "shared": "boolean",
-    "external": "boolean"
-  }
-]
+```bash
+curl -X GET http://localhost:8080/api/v1/networks \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ### Get Network
 
-Returns details for a specific network.
+**Curl Example:**
 
-**URL**: `/api/networks/:id`
+```bash
+curl -X GET http://localhost:8080/api/v1/networks/NETWORK_ID \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
 
-**Method**: `GET`
+### Create Network
 
-**Auth required**: Yes (JWT)
-
-**URL Parameters**:
-
-- `id`: Network ID
-
-**Success Response**:
-
-- **Code**: 200 OK
-- **Content**:
+**Request:**
 
 ```json
 {
-  "id": "string",
-  "name": "string",
-  "status": "string",
-  "shared": "boolean",
-  "external": "boolean"
+  "name": "my-network",
+  "shared": false,
+  "external": false,
+  "admin_state_up": true
 }
+```
+
+**Curl Example:**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/networks \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "my-network",
+    "shared": false,
+    "external": false,
+    "admin_state_up": true
+  }'
+```
+
+### Delete Network
+
+**Curl Example:**
+
+```bash
+curl -X DELETE http://localhost:8080/api/v1/networks/NETWORK_ID \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ## Volumes
@@ -484,5 +487,34 @@ Returns details for a specific project.
   "description": "string",
   "enabled": "boolean",
   "domain_id": "string"
+}
+```
+
+## Key Pairs
+
+- `GET /api/v1/keypairs` - List all key pairs
+- `GET /api/v1/keypairs/:name` - Get key pair details
+- `POST /api/v1/keypairs` - Create a new key pair
+- `DELETE /api/v1/keypairs/:name` - Delete a key pair
+
+### Create Key Pair
+
+**Request:**
+
+```json
+{
+  "name": "my-keypair",
+  "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAA..." // Optional, if not provided a new key pair will be generated
+}
+```
+
+**Response:**
+
+```json
+{
+  "name": "my-keypair",
+  "fingerprint": "7e:eb:ab:24:ba:d1:e1:88:ae:9a:fb:66:53:df:d3:bd",
+  "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAA...",
+  "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAw2..." // Only returned when creating a new key pair
 }
 ``` 

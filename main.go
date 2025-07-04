@@ -120,6 +120,7 @@ func main() {
 	var networkHandler *handlers.NetworkHandler
 	var volumeHandler *handlers.VolumeHandler
 	var projectHandler *handlers.ProjectHandler
+	var keyPairHandler *handlers.KeyPairHandler
 
 	// Try to create OpenStack client, but don't fail if it doesn't work
 	openStackClient, err = client.NewOpenStackClient()
@@ -131,11 +132,13 @@ func main() {
 		networkHandler = &handlers.NetworkHandler{}
 		volumeHandler = &handlers.VolumeHandler{}
 		projectHandler = &handlers.ProjectHandler{}
+		keyPairHandler = &handlers.KeyPairHandler{}
 	} else {
 		// Create real handlers with OpenStack client
 		networkHandler = handlers.NewNetworkHandler(openStackClient)
 		volumeHandler = handlers.NewVolumeHandler(openStackClient)
 		projectHandler = handlers.NewProjectHandler(openStackClient)
+		keyPairHandler = handlers.NewKeyPairHandler(openStackClient)
 	}
 
 	// Network routes
@@ -230,6 +233,40 @@ func main() {
 			})
 		}
 		return projectHandler.GetProject(c)
+	})
+
+	// Key pair routes
+	projectScoped.Get("/keypairs", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return keyPairHandler.ListKeyPairs(c)
+	})
+	projectScoped.Post("/keypairs", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return keyPairHandler.CreateKeyPair(c)
+	})
+	projectScoped.Get("/keypairs/:name", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return keyPairHandler.GetKeyPair(c)
+	})
+	projectScoped.Delete("/keypairs/:name", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return keyPairHandler.DeleteKeyPair(c)
 	})
 
 	// Add a root endpoint that shows API info
