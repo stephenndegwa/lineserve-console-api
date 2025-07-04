@@ -1,142 +1,148 @@
-# Lineserve API
+# Lineserve Cloud API
 
-A Go-based REST API for Lineserve, a public cloud company powered by OpenStack.
+This is the backend API for Lineserve Cloud, providing user registration, authentication, and cloud resource management through OpenStack using Gophercloud v2.7.0.
 
 ## Features
 
-- Authentication with JWT
-- Instance (VM) management
-- Image management
-- Flavor management
-- Network management
-- Volume management
-- Project management
+- User registration with OpenStack integration
+- JWT-based authentication
+- Multi-tenant support with project scoping
+- OpenStack resource management (instances, images, volumes, networks)
+- Email verification (stubbed)
+- PostgreSQL integration for user management
 
 ## Prerequisites
 
-- Go 1.20 or higher
-- OpenStack credentials
-- Access to an OpenStack environment
+- Go 1.22 or higher
+- PostgreSQL database
+- OpenStack cloud environment with Keystone v3
 
-## Installation
+## Environment Variables
 
-1. Clone the repository:
-
-```bash
-git clone https://github.com/lineserve/lineserve-api.git
-cd lineserve-api
-```
-
-2. Copy the sample environment file and update it with your OpenStack credentials:
+Copy the `env.sample` file to `.env` and update the values:
 
 ```bash
 cp env.sample .env
 ```
 
-3. Update the `.env` file with your OpenStack credentials and JWT secret.
+Required environment variables:
 
-4. Build the application:
+- `API_PORT`: API server port (default: 3075)
+- `JWT_SECRET`: Secret key for JWT token generation
+- `OS_AUTH_URL`: OpenStack Keystone authentication URL
+- `OS_USERNAME`: OpenStack admin username
+- `OS_PASSWORD`: OpenStack admin password
+- `OS_PROJECT_ID`: OpenStack admin project ID
+- `OS_PROJECT_NAME`: OpenStack admin project name
+- `OS_DOMAIN_NAME`: OpenStack domain name (default: Default)
+- `OS_USER_DOMAIN_NAME`: OpenStack user domain name (default: Default)
+- `OS_PROJECT_DOMAIN_NAME`: OpenStack project domain name (default: Default)
+- `OS_REGION_NAME`: OpenStack region name
+- `OS_IDENTITY_API_VERSION`: OpenStack identity API version (default: 3)
+- `OS_INTERFACE`: OpenStack interface type (default: public)
+- `OPENSTACK_MEMBER_ROLE_ID`: OpenStack member role ID
+- `POSTGRES_HOST`: PostgreSQL host
+- `POSTGRES_PORT`: PostgreSQL port
+- `POSTGRES_USER`: PostgreSQL user
+- `POSTGRES_PASSWORD`: PostgreSQL password
+- `POSTGRES_DB`: PostgreSQL database name
+- `POSTGRES_SSLMODE`: PostgreSQL SSL mode
 
-```bash
-go build -o lineserve-api
+## PostgreSQL Setup
+
+Create the following tables in your PostgreSQL database:
+
+```sql
+-- Create users table
+CREATE TABLE lineserve_cloud_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    openstack_user_id TEXT,
+    openstack_project_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    verified BOOLEAN DEFAULT FALSE
+);
+
+-- Create email verifications table
+CREATE TABLE lineserve_cloud_email_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES lineserve_cloud_users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create user projects table
+CREATE TABLE lineserve_cloud_user_projects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES lineserve_cloud_users(id) ON DELETE CASCADE,
+    project_id TEXT NOT NULL,
+    role_id TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 ```
 
-## Usage
-
-### Running the API
+## Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/lineserve/lineserve-api.git
+cd lineserve-api
+
+# Install dependencies
+go mod tidy
+
+# Build the application
+go build -o lineserve-api
+
+# Run the application
 ./lineserve-api
 ```
 
-The API will start on port 8080 by default, or the port specified in the `.env` file.
+## API Endpoints
 
-### API Endpoints
+### Authentication Endpoints
 
-#### Authentication
+- `POST /v1/login`: Authenticate a user with unscoped token
+  - Returns a JWT token and list of available projects
 
-- `POST /api/login` - Authenticate and get a JWT token
+- `POST /v1/projects/token`: Get a project-scoped token
+  - Returns a JWT token scoped to the specified project
 
-#### Instances
+- `POST /v1/register`: Register a new user
+  - Creates a user in the database
+  - Creates an OpenStack user
+  - Creates an OpenStack project
+  - Assigns the member role to the user for the project
 
-- `GET /api/instances` - List all instances
-- `POST /api/instances` - Create a new instance
-- `GET /api/instances/:id` - Get instance details
+### Protected Endpoints (require project-scoped JWT token)
 
-#### Images
+- `GET /v1/instances`: List instances
+- `POST /v1/instances`: Create an instance
+- `GET /v1/instances/:id`: Get instance details
+- `DELETE /v1/instances/:id`: Delete an instance
+- `GET /v1/images`: List images
+- `GET /v1/images/:id`: Get image details
+- `GET /v1/flavors`: List flavors
+- `GET /v1/networks`: List networks
+- `GET /v1/networks/:id`: Get network details
+- `GET /v1/volumes`: List volumes
+- `POST /v1/volumes`: Create a volume
+- `GET /v1/volumes/:id`: Get volume details
 
-- `GET /api/images` - List all images
-- `GET /api/images/:id` - Get image details
+## OpenStack Integration
 
-#### Flavors
+This API uses Gophercloud v2.7.0 for OpenStack integration with the following features:
 
-- `GET /api/flavors` - List all flavors
-
-#### Networks
-
-- `GET /api/networks` - List all networks
-- `GET /api/networks/:id` - Get network details
-
-#### Volumes
-
-- `GET /api/volumes` - List all volumes
-- `POST /api/volumes` - Create a new volume
-- `GET /api/volumes/:id` - Get volume details
-
-#### Projects
-
-- `GET /api/projects` - List all projects
-- `GET /api/projects/:id` - Get project details
-
-## Authentication
-
-To access protected endpoints, include the JWT token in the Authorization header:
-
-```
-Authorization: Bearer <token>
-```
-
-You can obtain a token by making a POST request to `/api/login` with your username and password.
-
-## Environment Variables
-
-The following environment variables are required:
-
-```
-# API Configuration
-PORT=8080
-JWT_SECRET=your-jwt-secret-key
-
-# OpenStack Configuration
-OS_AUTH_URL=http://your-openstack-auth-url
-OS_USERNAME=your-username
-OS_PASSWORD=your-password
-OS_PROJECT_ID=your-project-id
-OS_PROJECT_NAME=your-project-name
-OS_USER_DOMAIN_NAME=Default
-OS_REGION_NAME=your-region-name
-```
-
-## Development
-
-### Project Structure
-
-- `cmd/` - Command-line tools
-- `docs/` - Documentation
-- `internal/` - Internal packages
-- `pkg/` - Public packages
-  - `client/` - OpenStack client
-  - `config/` - Configuration
-  - `handlers/` - API handlers
-  - `middleware/` - Middleware
-  - `models/` - Data models
-
-### Running Tests
-
-```bash
-go test ./...
-```
+- Unscoped authentication for initial login
+- Project-scoped authentication for resource operations
+- Context-aware service client creation
+- Proper token extraction and validation
+- Multi-tenant isolation through project scoping
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+MIT 

@@ -4,23 +4,91 @@ import "time"
 
 // LoginRequest represents a login request
 type LoginRequest struct {
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	AuthURL     string `json:"auth_url"`
-	ProjectID   string `json:"project_id"`
-	ProjectName string `json:"project_name"`
-	DomainName  string `json:"domain_name"`
-	RegionName  string `json:"region_name"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	DomainName string `json:"domain_name"`
 }
 
 // LoginResponse represents the login response body
 type LoginResponse struct {
-	Token string `json:"token"`
+	Token     string    `json:"token"`
+	UserID    string    `json:"user_id"`
+	Projects  []Project `json:"projects"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// ProjectScopeRequest represents a request to get a project-scoped token
+type ProjectScopeRequest struct {
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	DomainName string `json:"domain_name"`
+	ProjectID  string `json:"project_id"`
+}
+
+// ProjectScopeResponse represents the response for a project-scoped token
+type ProjectScopeResponse struct {
+	Token     string    `json:"token"`
+	ProjectID string    `json:"project_id"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// RegisterRequest represents a user registration request
+type RegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+	Password string `json:"password"`
+}
+
+// RegisterResponse represents the registration response body
+type RegisterResponse struct {
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	ProjectID string `json:"project_id"`
+	Message   string `json:"message"`
+}
+
+// LineserveCloudUser represents a user in the lineserve_cloud_users table
+type LineserveCloudUser struct {
+	ID                 string    `json:"id"`
+	Name               string    `json:"name"`
+	Email              string    `json:"email"`
+	Phone              string    `json:"phone"`
+	PasswordHash       string    `json:"password_hash"`
+	OpenstackUserID    string    `json:"openstack_user_id"`
+	OpenstackProjectID string    `json:"openstack_project_id"`
+	CreatedAt          time.Time `json:"created_at"`
+	Verified           bool      `json:"verified"`
+}
+
+// UserProject represents a mapping between a user and a project
+type UserProject struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	ProjectID string    `json:"project_id"`
+	RoleID    string    `json:"role_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// EmailVerification represents an email verification record
+type EmailVerification struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// TokenClaims represents the claims in a JWT token
+type TokenClaims struct {
+	UserID    string `json:"user_id"`
+	ProjectID string `json:"project_id,omitempty"`
+	Role      string `json:"role,omitempty"`
 }
 
 // Address represents an instance network address
@@ -113,7 +181,18 @@ type CreateVolumeRequest struct {
 type Project struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
-	Description string `json:"description"`
-	Enabled     bool   `json:"enabled"`
-	DomainID    string `json:"domain_id"`
+	Description string `json:"description,omitempty"`
+	Enabled     bool   `json:"enabled,omitempty"`
+	DomainID    string `json:"domain_id,omitempty"`
+}
+
+// ProjectListResponse represents the response for listing projects
+type ProjectListResponse struct {
+	Projects []Project `json:"projects"`
+}
+
+// Role represents an identity role
+type Role struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }

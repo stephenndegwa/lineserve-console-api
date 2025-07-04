@@ -1,32 +1,192 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/lineserve/lineserve-api/internal/services"
-	"github.com/lineserve/lineserve-api/pkg/client"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/gophercloud/gophercloud/v2"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/flavors"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"github.com/lineserve/lineserve-api/pkg/models"
+	"github.com/lineserve/lineserve-api/pkg/openstack"
 )
 
 // ComputeHandler handles compute related endpoints
 type ComputeHandler struct {
-	ComputeService *services.ComputeService
+	JWTSecret string
 }
 
 // NewComputeHandler creates a new compute handler
-func NewComputeHandler(client *client.OpenStackClient) *ComputeHandler {
+func NewComputeHandler(jwtSecret string) *ComputeHandler {
 	return &ComputeHandler{
-		ComputeService: services.NewComputeService(client),
+		JWTSecret: jwtSecret,
 	}
 }
 
-// ListInstances lists all instances
-func (h *ComputeHandler) ListInstances(c *fiber.Ctx) error {
-	// Get instances from service
-	instances, err := h.ComputeService.ListInstances()
+// getProviderFromToken extracts the project-scoped provider from the JWT token
+func (h *ComputeHandler) getProviderFromToken(c *fiber.Ctx) (*gophercloud.ProviderClient, error) {
+	// Get token from Authorization header
+	authHeader := c.Get("Authorization")
+	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+		return nil, fmt.Errorf("invalid or missing Authorization header")
+	}
+
+	// Parse token
+	tokenString := authHeader[7:]
+	fmt.Printf("Parsing JWT token: %s\n", tokenString)
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(h.JWTSecret), nil
+	})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to list instances",
+		return nil, fmt.Errorf("invalid token: %v", err)
+	}
+
+	// Extract claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	fmt.Printf("JWT Claims: %+v\n", claims)
+
+	// Extract username, password, domain, and project ID
+	username, ok := claims["username"].(string)
+	if !ok || username == "" {
+		return nil, fmt.Errorf("username not found in token")
+	}
+
+	projectID, ok := claims["project_id"].(string)
+	if !ok || projectID == "" {
+		return nil, fmt.Errorf("project_id not found in token")
+	}
+
+	domainName, ok := claims["domain_name"].(string)
+	if !ok || domainName == "" {
+		domainName = "Default" // Use default domain if not specified
+	}
+
+	fmt.Printf("Token info - Username: %s, ProjectID: %s, DomainName: %s\n", username, projectID, domainName)
+
+	// Get provider from context (if available)
+	if provider, ok := c.Locals("provider").(*gophercloud.ProviderClient); ok && provider != nil {
+		fmt.Println("Using provider from context")
+		return provider, nil
+	}
+
+	// Try to get OpenStack token from JWT claims
+	openstackToken, ok := claims["openstack_token"].(string)
+	if ok && openstackToken != "" {
+		fmt.Printf("Found OpenStack token in JWT claims: %s\n", openstackToken[:20]+"...")
+		// Use the OpenStack token to authenticate
+		ctx := c.Context()
+		provider, err := openstack.AuthenticateWithToken(ctx, openstackToken, projectID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to authenticate with OpenStack token: %v", err)
+		}
+		return provider, nil
+	} else {
+		fmt.Println("No OpenStack token found in JWT claims")
+	}
+
+	// If no OpenStack token in claims, try header
+	tokenID := c.Get("X-Auth-Token")
+	if tokenID != "" {
+		fmt.Printf("Found X-Auth-Token header: %s\n", tokenID[:20]+"...")
+		ctx := c.Context()
+		provider, err := openstack.AuthenticateWithToken(ctx, tokenID, projectID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to authenticate with X-Auth-Token: %v", err)
+		}
+		return provider, nil
+	} else {
+		fmt.Println("No X-Auth-Token header found")
+	}
+
+	// Last resort: try to authenticate with username (will likely fail without password)
+	fmt.Println("Trying to authenticate with username (no password)")
+	ctx := c.Context()
+	provider, err := openstack.AuthenticateScoped(ctx, username, "", domainName, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("no authenticated provider found: %v", err)
+	}
+
+	return provider, nil
+}
+
+// ListInstances lists all instances in the project
+func (h *ComputeHandler) ListInstances(c *fiber.Ctx) error {
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Authentication error: %v", err),
 		})
+	}
+
+	// Create compute client
+	computeClient, err := openstack.NewComputeClient(provider)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create compute client: %v", err),
+		})
+	}
+
+	// List servers
+	ctx := context.Background()
+	allPages, err := servers.List(computeClient, servers.ListOpts{}).AllPages(ctx)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to list instances: %v", err),
+		})
+	}
+
+	allServers, err := servers.ExtractServers(allPages)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to extract instances: %v", err),
+		})
+	}
+
+	// Convert to our model
+	instances := make([]models.Instance, len(allServers))
+	for i, server := range allServers {
+		// Convert addresses
+		addresses := make(map[string][]models.Address)
+		for networkName, networkAddresses := range server.Addresses {
+			addrs := []models.Address{}
+			for _, addr := range networkAddresses.([]interface{}) {
+				addrMap := addr.(map[string]interface{})
+				address := models.Address{
+					Type:    addrMap["OS-EXT-IPS:type"].(string),
+					Address: addrMap["addr"].(string),
+				}
+				addrs = append(addrs, address)
+			}
+			addresses[networkName] = addrs
+		}
+
+		// Convert metadata to map[string]interface{} if needed
+		metadata := make(map[string]interface{})
+		for k, v := range server.Metadata {
+			metadata[k] = v
+		}
+
+		instances[i] = models.Instance{
+			ID:        server.ID,
+			Name:      server.Name,
+			Status:    server.Status,
+			Flavor:    server.Flavor["id"].(string),
+			Image:     server.Image["id"].(string),
+			Addresses: addresses,
+			Created:   server.Created,
+			Metadata:  metadata,
+		}
 	}
 
 	// Return instances
@@ -35,80 +195,256 @@ func (h *ComputeHandler) ListInstances(c *fiber.Ctx) error {
 
 // CreateInstance creates a new instance
 func (h *ComputeHandler) CreateInstance(c *fiber.Ctx) error {
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Authentication error: %v", err),
+		})
+	}
+
 	// Parse request body
 	var req models.CreateInstanceRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid request body",
 		})
 	}
 
 	// Validate required fields
 	if req.Name == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Name is required",
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Name is required",
 		})
 	}
 	if req.FlavorID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "FlavorID is required",
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "FlavorID is required",
 		})
 	}
 	if req.ImageID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "ImageID is required",
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "ImageID is required",
 		})
 	}
 	if req.NetworkID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "NetworkID is required",
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "NetworkID is required",
 		})
 	}
 
-	// Create instance
-	instance, err := h.ComputeService.CreateInstance(req)
+	// Create compute client
+	computeClient, err := openstack.NewComputeClient(provider)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create instance",
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create compute client: %v", err),
+		})
+	}
+
+	// Create server
+	createOpts := servers.CreateOpts{
+		Name:      req.Name,
+		FlavorRef: req.FlavorID,
+		ImageRef:  req.ImageID,
+		Networks: []servers.Network{
+			{
+				UUID: req.NetworkID,
+			},
+		},
+	}
+
+	// Add key pair if provided
+	var serverCreateOpts servers.CreateOptsBuilder = createOpts
+	if req.KeyName != "" {
+		// In Gophercloud v2.7.0, we need to use a custom struct that embeds CreateOpts
+		type createOptsWithKeyName struct {
+			servers.CreateOpts
+			KeyName string `json:"key_name,omitempty"`
+		}
+
+		serverCreateOpts = createOptsWithKeyName{
+			CreateOpts: createOpts,
+			KeyName:    req.KeyName,
+		}
+	}
+
+	// Create the server
+	ctx := context.Background()
+	server, err := servers.Create(ctx, computeClient, serverCreateOpts, nil).Extract()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create instance: %v", err),
 		})
 	}
 
 	// Return instance
+	instance := models.Instance{
+		ID:      server.ID,
+		Name:    server.Name,
+		Status:  server.Status,
+		Created: server.Created,
+	}
+
 	return c.Status(fiber.StatusCreated).JSON(instance)
 }
 
 // GetInstance gets an instance by ID
 func (h *ComputeHandler) GetInstance(c *fiber.Ctx) error {
-	// Get ID from params
-	id := c.Params("id")
-	if id == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Instance ID is required",
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Authentication error: %v", err),
 		})
 	}
 
-	// Get instance from service
-	instance, err := h.ComputeService.GetInstance(id)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to get instance",
+	// Get ID from params
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Instance ID is required",
 		})
+	}
+
+	// Create compute client
+	computeClient, err := openstack.NewComputeClient(provider)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create compute client: %v", err),
+		})
+	}
+
+	// Get server
+	ctx := context.Background()
+	server, err := servers.Get(ctx, computeClient, id).Extract()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to get instance: %v", err),
+		})
+	}
+
+	// Convert addresses
+	addresses := make(map[string][]models.Address)
+	for networkName, networkAddresses := range server.Addresses {
+		addrs := []models.Address{}
+		for _, addr := range networkAddresses.([]interface{}) {
+			addrMap := addr.(map[string]interface{})
+			address := models.Address{
+				Type:    addrMap["OS-EXT-IPS:type"].(string),
+				Address: addrMap["addr"].(string),
+			}
+			addrs = append(addrs, address)
+		}
+		addresses[networkName] = addrs
+	}
+
+	// Convert metadata to map[string]interface{} if needed
+	metadata := make(map[string]interface{})
+	for k, v := range server.Metadata {
+		metadata[k] = v
+	}
+
+	// Convert to our model
+	instance := models.Instance{
+		ID:        server.ID,
+		Name:      server.Name,
+		Status:    server.Status,
+		Flavor:    server.Flavor["id"].(string),
+		Image:     server.Image["id"].(string),
+		Addresses: addresses,
+		Created:   server.Created,
+		Metadata:  metadata,
 	}
 
 	// Return instance
 	return c.JSON(instance)
 }
 
-// ListFlavors lists all flavors
-func (h *ComputeHandler) ListFlavors(c *fiber.Ctx) error {
-	// Get flavors from service
-	flavors, err := h.ComputeService.ListFlavors()
+// DeleteInstance deletes an instance by ID
+func (h *ComputeHandler) DeleteInstance(c *fiber.Ctx) error {
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to list flavors",
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Authentication error: %v", err),
 		})
 	}
 
+	// Get ID from params
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Instance ID is required",
+		})
+	}
+
+	// Create compute client
+	computeClient, err := openstack.NewComputeClient(provider)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create compute client: %v", err),
+		})
+	}
+
+	// Delete server
+	ctx := context.Background()
+	err = servers.Delete(ctx, computeClient, id).ExtractErr()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to delete instance: %v", err),
+		})
+	}
+
+	// Return success
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ListFlavors lists all flavors in the project
+func (h *ComputeHandler) ListFlavors(c *fiber.Ctx) error {
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Authentication error: %v", err),
+		})
+	}
+
+	// Create compute client
+	computeClient, err := openstack.NewComputeClient(provider)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create compute client: %v", err),
+		})
+	}
+
+	// List flavors
+	ctx := context.Background()
+	allPages, err := flavors.ListDetail(computeClient, flavors.ListOpts{}).AllPages(ctx)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to list flavors: %v", err),
+		})
+	}
+
+	allFlavors, err := flavors.ExtractFlavors(allPages)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to extract flavors: %v", err),
+		})
+	}
+
+	// Convert to our model
+	result := make([]models.Flavor, len(allFlavors))
+	for i, flavor := range allFlavors {
+		result[i] = models.Flavor{
+			ID:    flavor.ID,
+			Name:  flavor.Name,
+			RAM:   flavor.RAM,
+			VCPUs: flavor.VCPUs,
+			Disk:  flavor.Disk,
+		}
+	}
+
 	// Return flavors
-	return c.JSON(flavors)
+	return c.JSON(result)
 }
