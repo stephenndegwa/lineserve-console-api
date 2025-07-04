@@ -158,11 +158,25 @@ func GetAuthResult(ctx context.Context, provider *gophercloud.ProviderClient) (*
 
 // GetAdminProvider returns a provider client with admin credentials from environment variables
 func GetAdminProvider(ctx context.Context) (*gophercloud.ProviderClient, error) {
-	// Create auth options from environment variables
-	authOpts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get auth options from environment: %w", err)
+	// Use hardcoded admin credentials for OpenStack
+	authOpts := gophercloud.AuthOptions{
+		IdentityEndpoint: "http://94.130.8.184/identity/v3",
+		Username:         "admin",
+		Password:         "StrongAdminSecret",
+		DomainName:       "Default",
+		AllowReauth:      true,
+		Scope: &gophercloud.AuthScope{
+			ProjectName: "admin",
+			DomainName:  "Default",
+		},
 	}
+
+	// Print debug info
+	fmt.Println("Using hardcoded admin credentials:")
+	fmt.Printf("Auth URL: %s\n", authOpts.IdentityEndpoint)
+	fmt.Printf("Username: %s\n", authOpts.Username)
+	fmt.Printf("Domain Name: %s\n", authOpts.DomainName)
+	fmt.Printf("Project Name: %s\n", authOpts.Scope.ProjectName)
 
 	// Authenticate with OpenStack
 	provider, err := openstack.AuthenticatedClient(ctx, authOpts)

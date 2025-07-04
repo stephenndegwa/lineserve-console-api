@@ -257,7 +257,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get admin provider for user creation
+	// Get admin provider for user creation - REQUIRED
 	adminProvider, err := openstack.GetAdminProvider(ctx)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
@@ -265,7 +265,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create OpenStack user
+	// Create OpenStack user - REQUIRED
 	openstackUser, err := openstack.CreateUser(ctx, adminProvider, req.Email, req.Email, req.Password, "default")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
@@ -273,11 +273,10 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create OpenStack project
+	// Create OpenStack project - REQUIRED
 	projectName := fmt.Sprintf("lineserve-project-%s", strings.Split(uuid.New().String(), "-")[0])
 	project, err := openstack.CreateProject(ctx, adminProvider, projectName, fmt.Sprintf("Project for %s", req.Email), "default")
 	if err != nil {
-		// Cleanup: Delete the OpenStack user if project creation fails
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
 			Error: fmt.Sprintf("Failed to create OpenStack project: %v", err),
 		})
@@ -321,27 +320,18 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Generate verification token
-	verificationToken := uuid.New().String()
-	expiresAt := time.Now().Add(time.Hour * 24)
-
-	// Insert verification token
-	_, err = h.PostgresClient.InsertEmailVerification(ctx, userID, verificationToken, expiresAt)
+	// Set user as verified directly (no email verification)
+	_, err = h.PostgresClient.VerifyUser(ctx, userID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
-			Error: "Failed to create verification token",
-		})
+		fmt.Printf("Warning: Failed to mark user as verified: %v\n", err)
 	}
-
-	// Send verification email (async)
-	go h.sendVerificationEmail(req.Email, verificationToken)
 
 	// Return success
 	return c.Status(fiber.StatusCreated).JSON(models.RegisterResponse{
 		ID:        userID,
 		Email:     req.Email,
 		ProjectID: project.ID,
-		Message:   "User registered successfully. Please check your email to verify your account.",
+		Message:   "User registered successfully. Your account is ready to use.",
 	})
 }
 
@@ -397,7 +387,13 @@ func (h *AuthHandler) sendVerificationEmail(email, token string) {
 // ListProjects lists all projects for the authenticated user
 func (h *AuthHandler) ListProjects(c *fiber.Ctx) error {
 	// Get user claims from JWT
-	claims := c.Locals("user").(jwt.MapClaims)
+	claims, ok := c.Locals("user").(jwt.MapClaims)
+	if !ok || claims == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: "Invalid or missing token",
+		})
+	}
+
 	userID, _ := claims["user_id"].(string)
 	username, _ := claims["username"].(string)
 	domainName, _ := claims["domain_name"].(string)

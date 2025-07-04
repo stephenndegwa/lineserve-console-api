@@ -322,3 +322,23 @@ func (c *PostgresClient) SaveProject(ctx context.Context, project struct {
 
 	return nil
 }
+
+// VerifyUser marks a user as verified
+func (c *PostgresClient) VerifyUser(ctx context.Context, userID string) (bool, error) {
+	result, err := c.DB.ExecContext(ctx, `
+		UPDATE lineserve_cloud_users
+		SET verified = true
+		WHERE id = $1
+	`, userID)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to verify user: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	return rowsAffected > 0, nil
+}

@@ -71,6 +71,7 @@ func JWTMiddleware(jwtSecret string) fiber.Handler {
 		}
 
 		// Store claims in context
+		c.Locals("user", claims)
 		c.Locals("user_id", claims["user_id"])
 		c.Locals("username", claims["username"])
 		c.Locals("project_id", claims["project_id"])

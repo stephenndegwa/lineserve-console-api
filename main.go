@@ -77,7 +77,11 @@ func main() {
 	v1 := app.Group("/v1")
 
 	// Create auth handler
-	authHandler := handlers.NewAuthHandler(jwtSecret, postgresClient, cfg.OSMemberRoleID, cfg.OSDomainName)
+	authHandler := &handlers.AuthHandler{
+		PostgresClient: postgresClient,
+		JWTSecret:      jwtSecret,
+		MemberRoleID:   "93f6b134e78644d69817b8061205f339", // Updated member role ID
+	}
 
 	// Public routes
 	v1.Post("/login", authHandler.Login)
