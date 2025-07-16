@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -131,7 +132,12 @@ func (c *SupabaseClient) CreateVPSSubscription(subscription *models.VPSSubscript
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		// Read the response body for better error details
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("unexpected status code: %d (failed to read error body: %v)", resp.StatusCode, readErr)
+		}
+		return nil, fmt.Errorf("unexpected status code: %d, error: %s", resp.StatusCode, string(body))
 	}
 
 	var createdSubscriptions []models.VPSSubscription
@@ -300,7 +306,12 @@ func (c *SupabaseClient) CreateVPSInvoice(invoice *models.VPSInvoice) (*models.V
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		// Read the response body for better error details
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("unexpected status code: %d (failed to read error body: %v)", resp.StatusCode, readErr)
+		}
+		return nil, fmt.Errorf("unexpected status code: %d, error: %s", resp.StatusCode, string(body))
 	}
 
 	var createdInvoices []models.VPSInvoice
@@ -589,4 +600,68 @@ func (c *SupabaseClient) GetVPSInvoiceByMPesaCheckoutRequestID(checkoutRequestID
 	}
 
 	return invoices[0], nil
+}
+
+// GetUserByOpenStackID gets a user by their OpenStack user ID
+func (c *SupabaseClient) GetUserByOpenStackID(openstackUserID string) (*models.LineserveCloudUser, error) {
+	req, err := http.NewRequest("GET", c.ProjectURL+"rest/v1/lineserve_cloud_users?openstack_user_id=eq."+openstackUserID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("apikey", c.APIKey)
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var users []models.LineserveCloudUser
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return &users[0], nil
+}
+
+// GetLineserveCloudUserByID gets a lineserve cloud user by their Supabase user ID
+func (c *SupabaseClient) GetLineserveCloudUserByID(userID string) (*models.LineserveCloudUser, error) {
+	req, err := http.NewRequest("GET", c.ProjectURL+"rest/v1/lineserve_cloud_users?id=eq."+userID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("apikey", c.APIKey)
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var users []models.LineserveCloudUser
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return &users[0], nil
 }

@@ -180,51 +180,58 @@ func (h *PayPalHandler) CaptureOrder(c *fiber.Ctx) error {
 	// Provision VPS if OpenStack client is available
 	var instanceID string
 	if h.VPSHandler.OpenStackClient != nil && subscription.Plan != nil && subscription.Plan.OpenStackFlavorID != "" {
-		// Get project ID from context
-		projectID := c.Locals("project_id").(string)
+		// Get the user to get their OpenStack project ID
+		user, err := h.SupabaseClient.GetLineserveCloudUserByID(userID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": fmt.Sprintf("User not found: %v", err),
+			})
+		}
+
+		// Use the user's stored OpenStack project ID
+		projectID := user.OpenstackProjectID
 		if projectID == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Project ID not found",
-			})
-		}
+			// Skip provisioning if no project ID is configured
+			fmt.Printf("No OpenStack project ID configured for user %s, skipping provisioning\n", user.ID)
+		} else {
+			// Create instance name
+			instanceName := fmt.Sprintf("vps-%s-%s", subscription.Plan.PlanCode, subscription.ID[:8])
 
-		// Create instance name
-		instanceName := fmt.Sprintf("vps-%s-%s", subscription.Plan.PlanCode, subscription.ID[:8])
+			// TODO: Get appropriate image ID and network ID
+			imageID := "default-image-id"     // This should be replaced with actual image ID
+			networkID := "default-network-id" // This should be replaced with actual network ID
 
-		// TODO: Get appropriate image ID and network ID
-		imageID := "default-image-id"     // This should be replaced with actual image ID
-		networkID := "default-network-id" // This should be replaced with actual network ID
+			// Create instance
+			instance, err := h.VPSHandler.provisionInstance(projectID, instanceName, subscription.Plan.OpenStackFlavorID, imageID, networkID)
+			if err != nil {
+				// Update subscription with error status
+				errorUpdates := map[string]interface{}{
+					"status": "provisioning_failed",
+				}
+				_, updateErr := h.SupabaseClient.UpdateVPSSubscription(subscription.ID, errorUpdates)
+				if updateErr != nil {
+					// Log the error but continue
+					fmt.Printf("Failed to update subscription status: %v\n", updateErr)
+				}
 
-		// Create instance
-		instance, err := h.VPSHandler.provisionInstance(projectID, instanceName, subscription.Plan.OpenStackFlavorID, imageID, networkID)
-		if err != nil {
-			// Update subscription with error status
-			errorUpdates := map[string]interface{}{
-				"status": "provisioning_failed",
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": fmt.Sprintf("Failed to provision instance: %v", err),
+				})
 			}
-			_, updateErr := h.SupabaseClient.UpdateVPSSubscription(subscription.ID, errorUpdates)
-			if updateErr != nil {
+
+			// Update subscription with instance ID
+			instanceUpdates := map[string]interface{}{
+				"instance_id":          instance.ID,
+				"openstack_project_id": projectID,
+			}
+			updatedSubscription, err = h.SupabaseClient.UpdateVPSSubscription(subscription.ID, instanceUpdates)
+			if err != nil {
 				// Log the error but continue
-				fmt.Printf("Failed to update subscription status: %v\n", updateErr)
+				fmt.Printf("Failed to update subscription with instance ID: %v\n", err)
 			}
 
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": fmt.Sprintf("Failed to provision instance: %v", err),
-			})
+			instanceID = instance.ID
 		}
-
-		// Update subscription with instance ID
-		instanceUpdates := map[string]interface{}{
-			"instance_id":          instance.ID,
-			"openstack_project_id": projectID,
-		}
-		updatedSubscription, err = h.SupabaseClient.UpdateVPSSubscription(subscription.ID, instanceUpdates)
-		if err != nil {
-			// Log the error but continue
-			fmt.Printf("Failed to update subscription with instance ID: %v\n", err)
-		}
-
-		instanceID = instance.ID
 	}
 
 	// Return response

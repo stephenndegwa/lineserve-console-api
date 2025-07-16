@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -123,48 +124,71 @@ func (h *VPSHandler) Subscribe(c *fiber.Ctx) error {
 
 	// Provision OpenStack instance if flavor ID is available
 	if plan.OpenStackFlavorID != "" && h.OpenStackClient != nil {
-		// Get project ID from context
-		projectID := c.Locals("project_id").(string)
-		if projectID == "" {
+		// Get OpenStack user ID from context
+		openstackUserIDInterface := c.Locals("user_id")
+		if openstackUserIDInterface == nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Project ID not found",
+				"error": "User not authenticated",
 			})
 		}
 
-		// Create instance name
-		instanceName := fmt.Sprintf("vps-%s-%s", req.PlanCode, createdSubscription.ID[:8])
+		openstackUserID, ok := openstackUserIDInterface.(string)
+		if !ok || openstackUserID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid user authentication",
+			})
+		}
 
-		// TODO: Get appropriate image ID and network ID
-		imageID := "default-image-id"     // This should be replaced with actual image ID
-		networkID := "default-network-id" // This should be replaced with actual network ID
-
-		// Create instance using the compute client directly
-		instance, err := h.provisionInstance(projectID, instanceName, plan.OpenStackFlavorID, imageID, networkID)
+		// Get the corresponding Supabase user ID by OpenStack user ID
+		cleanedOpenstackUserID := strings.ReplaceAll(openstackUserID, "-", "")
+		user, err := h.SupabaseClient.GetUserByOpenStackID(cleanedOpenstackUserID)
 		if err != nil {
-			// Update subscription with error status
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": fmt.Sprintf("User not found: %v", err),
+			})
+		}
+
+		// Use the user's stored OpenStack project ID
+		projectID := user.OpenstackProjectID
+		if projectID == "" {
+			// Skip provisioning if no project ID is configured - VPS order will still be created
+			fmt.Printf("No OpenStack project ID configured for user %s, skipping provisioning\n", user.ID)
+		} else {
+			// Create instance name
+			instanceName := fmt.Sprintf("vps-%s-%s", req.PlanCode, createdSubscription.ID[:8])
+
+			// TODO: Get appropriate image ID and network ID
+			imageID := "default-image-id"     // This should be replaced with actual image ID
+			networkID := "default-network-id" // This should be replaced with actual network ID
+
+			// Create instance using the compute client directly
+			instance, err := h.provisionInstance(projectID, instanceName, plan.OpenStackFlavorID, imageID, networkID)
+			if err != nil {
+				// Update subscription with error status
+				updates := map[string]interface{}{
+					"status": "error",
+				}
+				_, updateErr := h.SupabaseClient.UpdateVPSSubscription(createdSubscription.ID, updates)
+				if updateErr != nil {
+					// Log the error but continue
+					fmt.Printf("Failed to update subscription status: %v\n", updateErr)
+				}
+
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": fmt.Sprintf("Failed to provision instance: %v", err),
+				})
+			}
+
+			// Update subscription with instance ID
 			updates := map[string]interface{}{
-				"status": "error",
+				"instance_id":          instance.ID,
+				"openstack_project_id": projectID,
 			}
-			_, updateErr := h.SupabaseClient.UpdateVPSSubscription(createdSubscription.ID, updates)
-			if updateErr != nil {
+			createdSubscription, err = h.SupabaseClient.UpdateVPSSubscription(createdSubscription.ID, updates)
+			if err != nil {
 				// Log the error but continue
-				fmt.Printf("Failed to update subscription status: %v\n", updateErr)
+				fmt.Printf("Failed to update subscription with instance ID: %v\n", err)
 			}
-
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": fmt.Sprintf("Failed to provision instance: %v", err),
-			})
-		}
-
-		// Update subscription with instance ID
-		updates := map[string]interface{}{
-			"instance_id":          instance.ID,
-			"openstack_project_id": projectID,
-		}
-		createdSubscription, err = h.SupabaseClient.UpdateVPSSubscription(createdSubscription.ID, updates)
-		if err != nil {
-			// Log the error but continue
-			fmt.Printf("Failed to update subscription with instance ID: %v\n", err)
 		}
 	}
 
@@ -204,13 +228,32 @@ func (h *VPSHandler) provisionInstance(projectID, name, flavorID, imageID, netwo
 
 // ListSubscriptions lists all VPS subscriptions for the authenticated user
 func (h *VPSHandler) ListSubscriptions(c *fiber.Ctx) error {
-	// Get user ID from context
-	userID := c.Locals("user_id").(string)
-	if userID == "" {
+	// Get OpenStack user ID from context
+	openstackUserIDInterface := c.Locals("user_id")
+	if openstackUserIDInterface == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "User not authenticated",
 		})
 	}
+
+	openstackUserID, ok := openstackUserIDInterface.(string)
+	if !ok || openstackUserID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user authentication",
+		})
+	}
+
+	// Get the corresponding Supabase user ID by OpenStack user ID
+	cleanedOpenstackUserID := strings.ReplaceAll(openstackUserID, "-", "")
+
+	user, err := h.SupabaseClient.GetUserByOpenStackID(cleanedOpenstackUserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("User not found: %v", err),
+		})
+	}
+
+	userID := user.ID // This is the Supabase user ID
 
 	// Get subscriptions from Supabase
 	subscriptions, err := h.SupabaseClient.GetVPSSubscriptionsByUserID(userID)
@@ -310,13 +353,33 @@ func (h *VPSHandler) RunRenewalBilling(c *fiber.Ctx) error {
 
 // CreateOrder creates a new VPS order and invoice
 func (h *VPSHandler) CreateOrder(c *fiber.Ctx) error {
-	// Get user ID from context
-	userID := c.Locals("user_id").(string)
-	if userID == "" {
+	// Get OpenStack user ID from context
+	openstackUserIDInterface := c.Locals("user_id")
+	if openstackUserIDInterface == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "User not authenticated",
+			"error": "User ID not found in token",
 		})
 	}
+
+	openstackUserID, ok := openstackUserIDInterface.(string)
+	if !ok || openstackUserID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user authentication",
+		})
+	}
+
+	// Get the corresponding Supabase user ID by OpenStack user ID
+	// Remove hyphens from OpenStack user ID to match database format
+	cleanedOpenstackUserID := strings.ReplaceAll(openstackUserID, "-", "")
+
+	user, err := h.SupabaseClient.GetUserByOpenStackID(cleanedOpenstackUserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("User not found: %v", err),
+		})
+	}
+
+	userID := user.ID // This is the Supabase user ID
 
 	// Parse request body
 	var req models.VPSOrderRequest
@@ -401,7 +464,6 @@ func (h *VPSHandler) CreateOrder(c *fiber.Ctx) error {
 		Currency:        "USD",
 		Status:          "unpaid",
 		PaymentMethodID: req.PaymentMethodID,
-		CreatedAt:       now,
 		ExpiresAt:       invoiceExpiresAt,
 	}
 
@@ -434,13 +496,32 @@ func (h *VPSHandler) CreateOrder(c *fiber.Ctx) error {
 
 // GetInvoice gets a VPS invoice by ID
 func (h *VPSHandler) GetInvoice(c *fiber.Ctx) error {
-	// Get user ID from context
-	userID := c.Locals("user_id").(string)
-	if userID == "" {
+	// Get OpenStack user ID from context
+	openstackUserIDInterface := c.Locals("user_id")
+	if openstackUserIDInterface == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "User not authenticated",
 		})
 	}
+
+	openstackUserID, ok := openstackUserIDInterface.(string)
+	if !ok || openstackUserID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user authentication",
+		})
+	}
+
+	// Get the corresponding Supabase user ID by OpenStack user ID
+	cleanedOpenstackUserID := strings.ReplaceAll(openstackUserID, "-", "")
+
+	user, err := h.SupabaseClient.GetUserByOpenStackID(cleanedOpenstackUserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("User not found: %v", err),
+		})
+	}
+
+	userID := user.ID // This is the Supabase user ID
 
 	// Get invoice ID from URL
 	id := c.Params("id")
@@ -471,13 +552,32 @@ func (h *VPSHandler) GetInvoice(c *fiber.Ctx) error {
 
 // PayInvoice pays a VPS invoice and provisions the VPS
 func (h *VPSHandler) PayInvoice(c *fiber.Ctx) error {
-	// Get user ID from context
-	userID := c.Locals("user_id").(string)
-	if userID == "" {
+	// Get OpenStack user ID from context
+	openstackUserIDInterface := c.Locals("user_id")
+	if openstackUserIDInterface == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "User not authenticated",
 		})
 	}
+
+	openstackUserID, ok := openstackUserIDInterface.(string)
+	if !ok || openstackUserID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user authentication",
+		})
+	}
+
+	// Get the corresponding Supabase user ID by OpenStack user ID
+	cleanedOpenstackUserID := strings.ReplaceAll(openstackUserID, "-", "")
+
+	user, err := h.SupabaseClient.GetUserByOpenStackID(cleanedOpenstackUserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("User not found: %v", err),
+		})
+	}
+
+	userID := user.ID // This is the Supabase user ID
 
 	// Get invoice ID from URL
 	id := c.Params("id")
@@ -584,51 +684,50 @@ func (h *VPSHandler) PayInvoice(c *fiber.Ctx) error {
 	// Provision VPS if OpenStack client is available
 	var instanceID string
 	if h.OpenStackClient != nil && subscription.Plan != nil && subscription.Plan.OpenStackFlavorID != "" {
-		// Get project ID from context
-		projectID := c.Locals("project_id").(string)
+		// Use the user's stored OpenStack project ID (already retrieved above)
+		projectID := user.OpenstackProjectID
 		if projectID == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Project ID not found",
-			})
-		}
+			// Skip provisioning if no project ID is configured
+			fmt.Printf("No OpenStack project ID configured for user %s, skipping provisioning\n", user.ID)
+		} else {
+			// Create instance name
+			instanceName := fmt.Sprintf("vps-%s-%s", subscription.Plan.PlanCode, subscription.ID[:8])
 
-		// Create instance name
-		instanceName := fmt.Sprintf("vps-%s-%s", subscription.Plan.PlanCode, subscription.ID[:8])
+			// TODO: Get appropriate image ID and network ID
+			imageID := "default-image-id"     // This should be replaced with actual image ID
+			networkID := "default-network-id" // This should be replaced with actual network ID
 
-		// TODO: Get appropriate image ID and network ID
-		imageID := "default-image-id"     // This should be replaced with actual image ID
-		networkID := "default-network-id" // This should be replaced with actual network ID
+			// Create instance
+			instance, err := h.provisionInstance(projectID, instanceName, subscription.Plan.OpenStackFlavorID, imageID, networkID)
+			if err != nil {
+				// Update subscription with error status
+				errorUpdates := map[string]interface{}{
+					"status": "provisioning_failed",
+				}
+				_, updateErr := h.SupabaseClient.UpdateVPSSubscription(subscription.ID, errorUpdates)
+				if updateErr != nil {
+					// Log the error but continue
+					fmt.Printf("Failed to update subscription status: %v\n", updateErr)
+				}
 
-		// Create instance
-		instance, err := h.provisionInstance(projectID, instanceName, subscription.Plan.OpenStackFlavorID, imageID, networkID)
-		if err != nil {
-			// Update subscription with error status
-			errorUpdates := map[string]interface{}{
-				"status": "provisioning_failed",
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": fmt.Sprintf("Failed to provision instance: %v", err),
+				})
 			}
-			_, updateErr := h.SupabaseClient.UpdateVPSSubscription(subscription.ID, errorUpdates)
-			if updateErr != nil {
+
+			// Update subscription with instance ID
+			instanceUpdates := map[string]interface{}{
+				"instance_id":          instance.ID,
+				"openstack_project_id": projectID,
+			}
+			updatedSubscription, err = h.SupabaseClient.UpdateVPSSubscription(subscription.ID, instanceUpdates)
+			if err != nil {
 				// Log the error but continue
-				fmt.Printf("Failed to update subscription status: %v\n", updateErr)
+				fmt.Printf("Failed to update subscription with instance ID: %v\n", err)
 			}
 
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": fmt.Sprintf("Failed to provision instance: %v", err),
-			})
+			instanceID = instance.ID
 		}
-
-		// Update subscription with instance ID
-		instanceUpdates := map[string]interface{}{
-			"instance_id":          instance.ID,
-			"openstack_project_id": projectID,
-		}
-		updatedSubscription, err = h.SupabaseClient.UpdateVPSSubscription(subscription.ID, instanceUpdates)
-		if err != nil {
-			// Log the error but continue
-			fmt.Printf("Failed to update subscription with instance ID: %v\n", err)
-		}
-
-		instanceID = instance.ID
 	}
 
 	// Return response
@@ -641,13 +740,32 @@ func (h *VPSHandler) PayInvoice(c *fiber.Ctx) error {
 
 // ListInvoices lists all invoices for the authenticated user
 func (h *VPSHandler) ListInvoices(c *fiber.Ctx) error {
-	// Get user ID from context
-	userID := c.Locals("user_id").(string)
-	if userID == "" {
+	// Get OpenStack user ID from context
+	openstackUserIDInterface := c.Locals("user_id")
+	if openstackUserIDInterface == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "User not authenticated",
 		})
 	}
+
+	openstackUserID, ok := openstackUserIDInterface.(string)
+	if !ok || openstackUserID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user authentication",
+		})
+	}
+
+	// Get the corresponding Supabase user ID by OpenStack user ID
+	cleanedOpenstackUserID := strings.ReplaceAll(openstackUserID, "-", "")
+
+	user, err := h.SupabaseClient.GetUserByOpenStackID(cleanedOpenstackUserID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fmt.Sprintf("User not found: %v", err),
+		})
+	}
+
+	userID := user.ID // This is the Supabase user ID
 
 	// Get invoices from Supabase
 	invoices, err := h.SupabaseClient.GetVPSInvoicesByUserID(userID)

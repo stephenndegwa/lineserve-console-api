@@ -544,8 +544,8 @@ func main() {
 		return routerHandler.UpdateRouterInterfaces(c)
 	})
 
-	// VPS routes
-	vpsRoutes := projectScoped.Group("/vps")
+	// VPS routes (require authentication but not project scope)
+	vpsRoutes := protected.Group("/vps")
 	vpsRoutes.Get("/plans", vpsHandler.ListPlans)
 	vpsRoutes.Post("/subscribe", vpsHandler.Subscribe)
 	vpsRoutes.Get("/subscriptions", vpsHandler.ListSubscriptions)
@@ -557,9 +557,9 @@ func main() {
 	vpsRoutes.Post("/invoice/:id/pay", vpsHandler.PayInvoice)
 	vpsRoutes.Get("/invoices", vpsHandler.ListInvoices)
 
-	// PayPal routes
+	// PayPal routes (for VPS payments, require authentication but not project scope)
 	if paypalClient != nil {
-		paypalRoutes := projectScoped.Group("/paypal")
+		paypalRoutes := protected.Group("/paypal")
 		paypalRoutes.Post("/create-order", paypalHandler.CreateOrder)
 		paypalRoutes.Post("/capture-order", paypalHandler.CaptureOrder)
 		paypalRoutes.Get("/order/:id", paypalHandler.GetOrderStatus)
@@ -568,9 +568,9 @@ func main() {
 		v1.Post("/paypal/webhook", paypalHandler.HandleWebhook)
 	}
 
-	// Stripe routes
+	// Stripe routes (for VPS payments, require authentication but not project scope)
 	if stripeClient != nil {
-		stripeRoutes := projectScoped.Group("/stripe")
+		stripeRoutes := protected.Group("/stripe")
 		stripeRoutes.Post("/checkout", stripeHandler.CreateCheckoutSession)
 		stripeRoutes.Post("/subscription", stripeHandler.CreateSubscription)
 		stripeRoutes.Post("/subscription/:id/cancel", stripeHandler.CancelSubscription)

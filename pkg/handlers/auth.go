@@ -164,6 +164,14 @@ func (h *AuthHandler) GetProjectToken(c *fiber.Ctx) error {
 		})
 	}
 
+	// Extract user information
+	user, err := authResult.ExtractUser()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to extract user: %v", err),
+		})
+	}
+
 	// Get the OpenStack token
 	openstackToken := provider.Token()
 
@@ -173,6 +181,7 @@ func (h *AuthHandler) GetProjectToken(c *fiber.Ctx) error {
 	// Set claims
 	expiresAt := tokenObj.ExpiresAt
 	claims := jwtToken.Claims.(jwt.MapClaims)
+	claims["user_id"] = user.ID
 	claims["username"] = req.Username
 	claims["project_id"] = req.ProjectID
 	claims["domain_name"] = domainName

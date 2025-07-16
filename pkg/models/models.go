@@ -472,7 +472,7 @@ type VPSPlan struct {
 
 // VPSSubscription represents a VPS subscription
 type VPSSubscription struct {
-	ID                   string    `json:"id"`
+	ID                   string    `json:"id,omitempty"`
 	UserID               string    `json:"user_id"`
 	PlanID               string    `json:"plan_id"`
 	CommitPeriod         int       `json:"commit_period"` // in months
@@ -484,10 +484,10 @@ type VPSSubscription struct {
 	Status               string    `json:"status"` // active, grace, expired, cancelled
 	InstanceID           string    `json:"instance_id,omitempty"`
 	OpenStackProjectID   string    `json:"openstack_project_id,omitempty"`
-	StripeSubscriptionID string    `json:"stripe_subscription_id"`
+	StripeSubscriptionID string    `json:"stripe_subscription_id,omitempty"`
 	PaymentID            string    `json:"payment_id,omitempty"`
-	CreatedAt            time.Time `json:"created_at"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	CreatedAt            time.Time `json:"created_at,omitempty"`
+	UpdatedAt            time.Time `json:"updated_at,omitempty"`
 	Plan                 *VPSPlan  `json:"plan,omitempty"` // Embedded plan details
 }
 
@@ -530,25 +530,26 @@ type VPSRenewalResult struct {
 
 // VPSInvoice represents a VPS invoice
 type VPSInvoice struct {
-	ID                     string     `json:"id"`
+	ID                     string     `json:"id,omitempty"`
 	UserID                 string     `json:"user_id"`
-	SubscriptionID         string     `json:"subscription_id"`
+	SubscriptionID         string     `json:"subscription_id,omitempty"`
 	PlanCode               string     `json:"plan_code"`
 	PeriodMonths           int        `json:"period_months"`
 	Amount                 float64    `json:"amount"`
 	Currency               string     `json:"currency"`
 	Status                 string     `json:"status"`
-	PaymentMethodID        string     `json:"payment_method_id"`
-	PaymentIntentID        string     `json:"payment_intent_id"`
-	TxRef                  string     `json:"tx_ref"`
-	StripeSessionID        string     `json:"stripe_session_id"`
-	StripePaymentID        string     `json:"stripe_payment_id"`
-	MPesaCheckoutRequestID string     `json:"mpesa_checkout_request_id"`
-	MPesaReceiptNo         string     `json:"mpesa_receipt_no"`
-	MPesaPhoneNumber       string     `json:"mpesa_phone_number"`
-	CreatedAt              time.Time  `json:"created_at"`
+	PaymentMethodID        string     `json:"payment_method_id,omitempty"`
+	PaymentIntentID        string     `json:"payment_intent_id,omitempty"`
+	TxRef                  string     `json:"tx_ref,omitempty"`
+	StripeSessionID        string     `json:"stripe_session_id,omitempty"`
+	StripePaymentID        string     `json:"stripe_payment_id,omitempty"`
+	MPesaCheckoutRequestID string     `json:"mpesa_checkout_request_id,omitempty"`
+	MPesaReceiptNo         string     `json:"mpesa_receipt_no,omitempty"`
+	MPesaPhoneNumber       string     `json:"mpesa_phone_number,omitempty"`
+	CreatedAt              time.Time  `json:"created_at,omitempty"`
 	ExpiresAt              time.Time  `json:"expires_at"`
-	PaidAt                 *time.Time `json:"paid_at"`
+	PaidAt                 *time.Time `json:"paid_at,omitempty"`
+	UpdatedAt              time.Time  `json:"updated_at,omitempty"`
 }
 
 // VPSOrderRequest represents a request to order a VPS
