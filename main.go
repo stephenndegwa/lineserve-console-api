@@ -81,7 +81,7 @@ func main() {
 	authHandler := &handlers.AuthHandler{
 		PostgresClient: postgresClient,
 		JWTSecret:      jwtSecret,
-		MemberRoleID:   "93f6b134e78644d69817b8061205f339", // Updated member role ID
+		MemberRoleID:   "c76575246ae343ddb80d0f0f1f2d958b", // Updated member role ID
 	}
 
 	// Public routes
