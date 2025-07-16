@@ -1,0 +1,213 @@
+		{
+			"name": "Routers",
+			"description": "Endpoints for managing routers",
+			"item": [
+				{
+					"name": "List Routers",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/routers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"routers"
+							]
+						},
+						"description": "List all routers in the project."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Router",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"test-router\",\n    \"admin_state_up\": true,\n    \"external_gateway_info\": {\n        \"network_id\": \"{{externalNetworkId}}\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/routers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"routers"
+							]
+						},
+						"description": "Create a new router."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Router",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/routers/{{routerId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"routers",
+								"{{routerId}}"
+							]
+						},
+						"description": "Get details of a specific router."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Router",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/routers/{{routerId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"routers",
+								"{{routerId}}"
+							]
+						},
+						"description": "Delete a router."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Router Interface",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"subnet_id\": \"{{subnetId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/routers/{{routerId}}/add_interface",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"routers",
+								"{{routerId}}",
+								"add_interface"
+							]
+						},
+						"description": "Add an interface to a router."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Router Interface",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"subnet_id\": \"{{subnetId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/routers/{{routerId}}/remove_interface",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"routers",
+								"{{routerId}}",
+								"remove_interface"
+							]
+						},
+						"description": "Remove an interface from a router."
+					},
+					"response": []
+				}
+			]
+		}

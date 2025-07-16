@@ -1,0 +1,136 @@
+{
+	"info": {
+		"_postman_id": "7a8b9c0d-1e2f-3g4h-5i6j-7k8l9m0n1o2p",
+		"name": "LineServe-MPesa-API",
+		"description": "A collection of API endpoints for the LineServe M-Pesa integration.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Initiate STK Push",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"invoice_id\": \"{{invoice_id}}\",\n    \"phone_number\": \"254712345678\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/v1/mpesa/stk-push",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"v1",
+						"mpesa",
+						"stk-push"
+					]
+				},
+				"description": "Initiates an M-Pesa STK push to the customer's phone for payment."
+			},
+			"response": []
+		},
+		{
+			"name": "Check STK Push Status",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"checkout_request_id\": \"ws_CO_DMZ_123456789_1234567890123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/v1/mpesa/check-status",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"v1",
+						"mpesa",
+						"check-status"
+					]
+				},
+				"description": "Checks the status of an M-Pesa STK push transaction."
+			},
+			"response": []
+		},
+		{
+			"name": "M-Pesa Callback",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Body\": {\n        \"stkCallback\": {\n            \"MerchantRequestID\": \"29115-34620561-1\",\n            \"CheckoutRequestID\": \"ws_CO_DMZ_123456789_1234567890123\",\n            \"ResultCode\": 0,\n            \"ResultDesc\": \"The service request is processed successfully.\",\n            \"CallbackMetadata\": {\n                \"Item\": [\n                    {\n                        \"Name\": \"Amount\",\n                        \"Value\": 1.00\n                    },\n                    {\n                        \"Name\": \"MpesaReceiptNumber\",\n                        \"Value\": \"LHG31AA5TX\"\n                    },\n                    {\n                        \"Name\": \"Balance\"\n                    },\n                    {\n                        \"Name\": \"TransactionDate\",\n                        \"Value\": 20230405175322\n                    },\n                    {\n                        \"Name\": \"PhoneNumber\",\n                        \"Value\": 254712345678\n                    }\n                ]\n            }\n        }\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/v1/mpesa/callback",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"v1",
+						"mpesa",
+						"callback"
+					]
+				},
+				"description": "Callback endpoint for M-Pesa STK push notifications."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3070",
+			"type": "string"
+		}
+	]
+} 

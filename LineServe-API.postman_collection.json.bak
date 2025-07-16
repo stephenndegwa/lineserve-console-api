@@ -220,7 +220,7 @@
 								"instances"
 							]
 						},
-						"description": "List all instances in the project."
+						"description": "List all compute instances in the project."
 					},
 					"response": []
 				},
@@ -246,7 +246,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"test-instance\",\n    \"flavor_id\": \"{{flavorId}}\",\n    \"image_id\": \"{{imageId}}\",\n    \"network_id\": \"{{networkId}}\",\n    \"key_name\": \"my-keypair\"\n}"
+							"raw": "{\n    \"name\": \"test-instance\",\n    \"flavor_id\": \"{{flavorId}}\",\n    \"image_id\": \"{{imageId}}\",\n    \"network_id\": \"{{networkId}}\",\n    \"key_name\": \"my-key\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/v1/instances",
@@ -258,7 +258,7 @@
 								"instances"
 							]
 						},
-						"description": "Create a new instance in the project."
+						"description": "Create a new compute instance."
 					},
 					"response": []
 				},
@@ -288,147 +288,7 @@
 								"{{instanceId}}"
 							]
 						},
-						"description": "Get details of a specific instance."
-					},
-					"response": []
-				},
-				{
-					"name": "Update Instance",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"updated-instance-name\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/v1/instances/{{instanceId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"instances",
-								"{{instanceId}}"
-							]
-						},
-						"description": "Update an instance's properties."
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Instance",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/instances/{{instanceId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"instances",
-								"{{instanceId}}"
-							]
-						},
-						"description": "Delete an instance."
-					},
-					"response": []
-				},
-				{
-					"name": "Instance Action",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"action\": \"reboot\",\n    \"type\": \"SOFT\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/v1/instances/{{instanceId}}/action",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"instances",
-								"{{instanceId}}",
-								"action"
-							]
-						},
-						"description": "Perform an action on an instance (start, stop, reboot)."
-					},
-					"response": []
-				},
-				{
-					"name": "Get Instance Metrics",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/instances/{{instanceId}}/metrics",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"instances",
-								"{{instanceId}}",
-								"metrics"
-							]
-						},
-						"description": "Get metrics for a specific instance."
+						"description": "Get details of a specific compute instance."
 					},
 					"response": []
 				}
@@ -463,7 +323,7 @@
 								"images"
 							]
 						},
-						"description": "List all images in the project."
+						"description": "List all images available in the project."
 					},
 					"response": []
 				},
@@ -496,9 +356,15 @@
 						"description": "Get details of a specific image."
 					},
 					"response": []
-				},
+				}
+			]
+		},
+		{
+			"name": "Flavors",
+			"description": "Endpoints for managing flavors",
+			"item": [
 				{
-					"name": "Create Image",
+					"name": "List Flavors",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -510,79 +376,19 @@
 								}
 							]
 						},
-						"method": "POST",
+						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "name",
-									"value": "test-image",
-									"type": "text"
-								},
-								{
-									"key": "container_format",
-									"value": "bare",
-									"type": "text"
-								},
-								{
-									"key": "disk_format",
-									"value": "qcow2",
-									"type": "text"
-								},
-								{
-									"key": "visibility",
-									"value": "private",
-									"type": "text"
-								},
-								{
-									"key": "file",
-									"type": "file",
-									"src": "/path/to/image.qcow2"
-								}
-							]
-						},
 						"url": {
-							"raw": "{{baseUrl}}/v1/images",
+							"raw": "{{baseUrl}}/v1/flavors",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"v1",
-								"images"
+								"flavors"
 							]
 						},
-						"description": "Upload a new image."
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Image",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/images/{{imageId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"images",
-								"{{imageId}}"
-							]
-						},
-						"description": "Delete an image."
+						"description": "List all flavors available in the project."
 					},
 					"response": []
 				}
@@ -617,45 +423,7 @@
 								"networks"
 							]
 						},
-						"description": "List all networks in the project."
-					},
-					"response": []
-				},
-				{
-					"name": "Create Network",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"test-network\",\n    \"admin_state_up\": true\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/v1/networks",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"networks"
-							]
-						},
-						"description": "Create a new network."
+						"description": "List all networks available in the project."
 					},
 					"response": []
 				},
@@ -686,67 +454,6 @@
 							]
 						},
 						"description": "Get details of a specific network."
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Network",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/networks/{{networkId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"networks",
-								"{{networkId}}"
-							]
-						},
-						"description": "Delete a network."
-					},
-					"response": []
-				},
-				{
-					"name": "Get Network Metrics",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/networks/{{networkId}}/metrics",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"networks",
-								"{{networkId}}",
-								"metrics"
-							]
-						},
-						"description": "Get metrics for a specific network."
 					},
 					"response": []
 				}
@@ -807,7 +514,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"test-volume\",\n    \"size\": 10,\n    \"volume_type\": \"{{volumeTypeId}}\"\n}"
+							"raw": "{\n    \"name\": \"test-volume\",\n    \"size\": 10,\n    \"volume_type\": \"standard\",\n    \"availability_zone\": \"nova\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/v1/volumes",
@@ -852,215 +559,54 @@
 						"description": "Get details of a specific volume."
 					},
 					"response": []
-				},
-				{
-					"name": "Delete Volume",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/volumes/{{volumeId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"volumes",
-								"{{volumeId}}"
-							]
-						},
-						"description": "Delete a volume."
-					},
-					"response": []
-				},
-				{
-					"name": "Attach Volume",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"instance_id\": \"{{instanceId}}\",\n    \"device\": \"/dev/vdb\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/v1/volumes/{{volumeId}}/attach",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"volumes",
-								"{{volumeId}}",
-								"attach"
-							]
-						},
-						"description": "Attach a volume to an instance."
-					},
-					"response": []
-				},
-				{
-					"name": "Detach Volume",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"attachment_id\": \"attachment-id\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/v1/volumes/{{volumeId}}/detach",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"volumes",
-								"{{volumeId}}",
-								"detach"
-							]
-						},
-						"description": "Detach a volume from an instance."
-					},
-					"response": []
-				},
-				{
-					"name": "Resize Volume",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"size\": 20\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/v1/volumes/{{volumeId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"volumes",
-								"{{volumeId}}"
-							]
-						},
-						"description": "Resize a volume."
-					},
-					"response": []
-				},
-				{
-					"name": "List Volume Types",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/volume-types",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"volume-types"
-							]
-						},
-						"description": "List all volume types."
-					},
-					"response": []
-				},
-				{
-					"name": "Get Volume Metrics",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{projectToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/v1/volumes/{{volumeId}}/metrics",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"v1",
-								"volumes",
-								"{{volumeId}}",
-								"metrics"
-							]
-						},
-						"description": "Get metrics for a specific volume."
-					},
-					"response": []
 				}
 			]
+		},
+		{
+			"name": "API Info",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						""
+					]
+				},
+				"description": "Get basic information about the API."
+			},
+			"response": []
 		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string",
+			"description": "Base URL for the API"
+		}
+	]
+} 

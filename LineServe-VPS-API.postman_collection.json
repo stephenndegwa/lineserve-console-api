@@ -1,0 +1,563 @@
+{
+	"info": {
+		"_postman_id": "9f4a8c1c-7b5e-4e3d-8f5a-2c8e1a0b5d7a",
+		"name": "LineServe VPS API",
+		"description": "A comprehensive collection for all VPS-related endpoints in the LineServe API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "Authentication endpoints required for VPS operations",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"your_username\",\n    \"password\": \"your_password\",\n    \"domain_name\": \"Default\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"login"
+							]
+						},
+						"description": "Login to get an authentication token"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"your_username\",\n    \"password\": \"your_password\",\n    \"domain_name\": \"Default\",\n    \"project_id\": \"your_project_id\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/project-token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"project-token"
+							]
+						},
+						"description": "Get a project-scoped token required for VPS operations"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "VPS Plans",
+			"description": "Endpoints for managing VPS plans",
+			"item": [
+				{
+					"name": "List VPS Plans",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/vps/plans",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"plans"
+							]
+						},
+						"description": "List all available VPS plans"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "VPS Subscriptions",
+			"description": "Endpoints for managing VPS subscriptions",
+			"item": [
+				{
+					"name": "Subscribe to VPS Plan",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"plan_code\": \"vps-micro\",\n    \"commit_period\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/vps/subscribe",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"subscribe"
+							]
+						},
+						"description": "Subscribe to a VPS plan (direct subscription with immediate provisioning)"
+					},
+					"response": []
+				},
+				{
+					"name": "List Subscriptions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/vps/subscriptions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"subscriptions"
+							]
+						},
+						"description": "List all VPS subscriptions for the authenticated user"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Subscription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"auto_renew\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/vps/subscriptions/:id/cancel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"subscriptions",
+								":id",
+								"cancel"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "subscription_id",
+									"description": "ID of the subscription to cancel"
+								}
+							]
+						},
+						"description": "Cancel auto-renewal for a VPS subscription"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "VPS Orders and Invoices",
+			"description": "Endpoints for managing VPS orders and invoices",
+			"item": [
+				{
+					"name": "Create VPS Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"plan_code\": \"vps-micro\",\n    \"commit_period\": 1,\n    \"payment_method_id\": \"pm_card_visa\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/vps/order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"order"
+							]
+						},
+						"description": "Create a new VPS order and invoice"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoice",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/vps/invoice/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"invoice",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "invoice_id",
+									"description": "ID of the invoice to retrieve"
+								}
+							]
+						},
+						"description": "Get details of a specific VPS invoice"
+					},
+					"response": []
+				},
+				{
+					"name": "Pay Invoice (Credit Card)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"payment_method_id\": \"pm_card_visa\",\n    \"payment_method\": \"card\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/vps/invoice/:id/pay",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"invoice",
+								":id",
+								"pay"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "invoice_id",
+									"description": "ID of the invoice to pay"
+								}
+							]
+						},
+						"description": "Pay a VPS invoice using a credit card and provision the VPS"
+					},
+					"response": []
+				},
+				{
+					"name": "List Invoices",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/vps/invoices",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"vps",
+								"invoices"
+							]
+						},
+						"description": "List all invoices for the authenticated user"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "PayPal Integration",
+			"description": "Endpoints for PayPal payment integration",
+			"item": [
+				{
+					"name": "Create PayPal Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"invoice_id\": \"invoice_id\",\n    \"return_url\": \"https://lineserve.net/payment/success\",\n    \"cancel_url\": \"https://lineserve.net/payment/cancel\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/paypal/create-order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"paypal",
+								"create-order"
+							]
+						},
+						"description": "Create a PayPal order for a VPS invoice"
+					},
+					"response": []
+				},
+				{
+					"name": "Capture PayPal Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"order_id\": \"paypal_order_id\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/paypal/capture-order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"paypal",
+								"capture-order"
+							]
+						},
+						"description": "Capture a PayPal order after approval"
+					},
+					"response": []
+				},
+				{
+					"name": "Get PayPal Order Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/paypal/order/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"paypal",
+								"order",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "paypal_order_id",
+									"description": "ID of the PayPal order"
+								}
+							]
+						},
+						"description": "Get the status of a PayPal order"
+					},
+					"response": []
+				},
+				{
+					"name": "PayPal Webhook (Server to Server)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Paypal-Transmission-Id",
+								"value": "{{$randomUUID}}"
+							},
+							{
+								"key": "Paypal-Transmission-Time",
+								"value": "{{$timestamp}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{$randomUUID}}\",\n    \"event_type\": \"PAYMENT.CAPTURE.COMPLETED\",\n    \"resource_type\": \"capture\",\n    \"summary\": \"Payment completed for order\",\n    \"resource\": {\n        \"id\": \"paypal_order_id\",\n        \"status\": \"COMPLETED\"\n    },\n    \"event_version\": \"1.0\",\n    \"resource_version\": \"2.0\",\n    \"create_time\": \"{{$isoTimestamp}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/paypal/webhook",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"paypal",
+								"webhook"
+							]
+						},
+						"description": "PayPal webhook endpoint for server-to-server notifications"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin Operations",
+			"description": "Administrative operations for VPS management (requires admin privileges)",
+			"item": [
+				{
+					"name": "Run VPS Renewal Billing",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/v1/admin/vps/billing/run",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"admin",
+								"vps",
+								"billing",
+								"run"
+							]
+						},
+						"description": "Run the VPS renewal billing process (admin only)"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3070",
+			"type": "string",
+			"description": "Base URL for the LineServe API"
+		},
+		{
+			"key": "token",
+			"value": "your_auth_token",
+			"type": "string",
+			"description": "Authentication token"
+		},
+		{
+			"key": "admin_token",
+			"value": "your_admin_token",
+			"type": "string",
+			"description": "Admin authentication token"
+		}
+	]
+} 

@@ -176,3 +176,156 @@ func (h *VolumeHandler) DeleteVolume(c *fiber.Ctx) error {
 		Message: "Volume deleted successfully",
 	})
 }
+
+// AttachVolume handles attaching a volume to an instance
+func (h *VolumeHandler) AttachVolume(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Compute == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack compute service unavailable",
+		})
+	}
+
+	// Get volume ID
+	volumeID := c.Params("id")
+	if volumeID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Volume ID is required",
+		})
+	}
+
+	// Parse request body
+	var req models.VolumeAttachRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid request body",
+		})
+	}
+
+	// Validate request
+	if req.InstanceID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Instance ID is required",
+		})
+	}
+
+	// Create volume service
+	volumeService := services.NewVolumeService(h.Client)
+
+	// Attach volume
+	attachment, err := volumeService.AttachVolume(volumeID, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to attach volume: " + err.Error(),
+		})
+	}
+
+	// Return attachment
+	return c.Status(fiber.StatusOK).JSON(attachment)
+}
+
+// DetachVolume handles detaching a volume from an instance
+func (h *VolumeHandler) DetachVolume(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Compute == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack compute service unavailable",
+		})
+	}
+
+	// Get volume ID
+	volumeID := c.Params("id")
+	if volumeID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Volume ID is required",
+		})
+	}
+
+	// Parse request body
+	var req models.VolumeDetachRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid request body",
+		})
+	}
+
+	// Create volume service
+	volumeService := services.NewVolumeService(h.Client)
+
+	// Detach volume
+	err := volumeService.DetachVolume(volumeID, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to detach volume: " + err.Error(),
+		})
+	}
+
+	// Return success
+	return c.Status(fiber.StatusOK).JSON(models.SuccessResponse{
+		Message: "Volume detached successfully",
+	})
+}
+
+// ResizeVolume handles resizing a volume
+func (h *VolumeHandler) ResizeVolume(c *fiber.Ctx) error {
+	// Check if OpenStack client is available
+	if h.Client == nil || h.Client.Volume == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(models.ErrorResponse{
+			Error: "OpenStack volume service unavailable",
+		})
+	}
+
+	// Get volume ID
+	volumeID := c.Params("id")
+	if volumeID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Volume ID is required",
+		})
+	}
+
+	// Parse request body
+	var req models.VolumeResizeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid request body",
+		})
+	}
+
+	// Validate request
+	if req.NewSize <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "New size must be greater than 0",
+		})
+	}
+
+	// Create volume service
+	volumeService := services.NewVolumeService(h.Client)
+
+	// Get current volume to check current size
+	volume, err := volumeService.GetVolume(volumeID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to get volume: " + err.Error(),
+		})
+	}
+
+	// Check if new size is greater than current size
+	if req.NewSize <= volume.Size {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "New size must be greater than current size",
+		})
+	}
+
+	// Resize volume
+	err = volumeService.ResizeVolume(volumeID, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to resize volume: " + err.Error(),
+		})
+	}
+
+	// Return success
+	return c.Status(fiber.StatusOK).JSON(models.SuccessResponse{
+		Message: "Volume resize operation started",
+	})
+}

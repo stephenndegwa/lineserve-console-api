@@ -1,0 +1,204 @@
+{
+	"info": {
+		"_postman_id": "9c7d8e6f-5a4b-3c2d-1e0f-8a7b6c5d4e3f",
+		"name": "LineServe-Stripe-API",
+		"description": "A collection of API endpoints for the LineServe Stripe integration.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Stripe Checkout Session",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"invoice_id\": \"{{invoice_id}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/v1/stripe/checkout",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"v1",
+						"stripe",
+						"checkout"
+					]
+				},
+				"description": "Creates a Stripe checkout session for a VPS invoice."
+			},
+			"response": []
+		},
+		{
+			"name": "Create Stripe Subscription",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"price_id\": \"{{stripe_price_id}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/v1/stripe/subscription",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"v1",
+						"stripe",
+						"subscription"
+					]
+				},
+				"description": "Creates a Stripe subscription checkout session."
+			},
+			"response": []
+		},
+		{
+			"name": "Cancel Stripe Subscription",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cancel_at_period_end\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/v1/stripe/subscription/{{stripe_subscription_id}}/cancel",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"v1",
+						"stripe",
+						"subscription",
+						"{{stripe_subscription_id}}",
+						"cancel"
+					]
+				},
+				"description": "Cancels a Stripe subscription."
+			},
+			"response": []
+		},
+		{
+			"name": "Stripe Webhook",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Stripe-Signature",
+						"value": "{{stripe_signature}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"id\": \"evt_test_webhook\",\n    \"object\": \"event\",\n    \"api_version\": \"2020-08-27\",\n    \"created\": 1619116734,\n    \"data\": {\n        \"object\": {\n            \"id\": \"cs_test_123\",\n            \"object\": \"checkout.session\",\n            \"payment_intent\": {\n                \"id\": \"pi_test_123\"\n            }\n        }\n    },\n    \"type\": \"checkout.session.completed\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/v1/stripe/webhook",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"v1",
+						"stripe",
+						"webhook"
+					]
+				},
+				"description": "Handles Stripe webhook events."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:4000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "your_auth_token",
+			"type": "string"
+		},
+		{
+			"key": "invoice_id",
+			"value": "your_invoice_id",
+			"type": "string"
+		},
+		{
+			"key": "stripe_price_id",
+			"value": "price_123456789",
+			"type": "string"
+		},
+		{
+			"key": "stripe_subscription_id",
+			"value": "sub_123456789",
+			"type": "string"
+		},
+		{
+			"key": "stripe_signature",
+			"value": "your_stripe_signature",
+			"type": "string"
+		}
+	]
+} 

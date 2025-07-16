@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/lineserve/lineserve-api/pkg/client"
 	"github.com/lineserve/lineserve-api/pkg/config"
+	"github.com/lineserve/lineserve-api/pkg/cron"
 	"github.com/lineserve/lineserve-api/pkg/handlers"
 	"github.com/lineserve/lineserve-api/pkg/middleware"
 )
@@ -106,11 +107,16 @@ func main() {
 	projectScoped.Get("/instances", instanceHandler.ListInstances)
 	projectScoped.Post("/instances", instanceHandler.CreateInstance)
 	projectScoped.Get("/instances/:id", instanceHandler.GetInstance)
+	projectScoped.Delete("/instances/:id", instanceHandler.DeleteInstance)
+	projectScoped.Put("/instances/:id", instanceHandler.UpdateInstance)
+	projectScoped.Post("/instances/:id/action", instanceHandler.PerformInstanceAction)
 
 	// Image routes
 	imageHandler := handlers.NewImageHandler(jwtSecret)
 	projectScoped.Get("/images", imageHandler.ListImages)
 	projectScoped.Get("/images/:id", imageHandler.GetImage)
+	projectScoped.Post("/images", imageHandler.CreateImage)
+	projectScoped.Delete("/images/:id", imageHandler.DeleteImage)
 
 	// Flavor routes
 	projectScoped.Get("/flavors", instanceHandler.ListFlavors)
@@ -121,6 +127,14 @@ func main() {
 	var volumeHandler *handlers.VolumeHandler
 	var projectHandler *handlers.ProjectHandler
 	var keyPairHandler *handlers.KeyPairHandler
+	var floatingIPHandler *handlers.FloatingIPHandler
+	var securityGroupHandler *handlers.SecurityGroupHandler
+	var subnetHandler *handlers.SubnetHandler
+	var routerHandler *handlers.RouterHandler
+	var vpsHandler *handlers.VPSHandler
+	var supabaseClient *client.SupabaseClient
+	var paypalClient *client.PayPalClient
+	var paypalHandler *handlers.PayPalHandler
 
 	// Try to create OpenStack client, but don't fail if it doesn't work
 	openStackClient, err = client.NewOpenStackClient()
@@ -133,13 +147,72 @@ func main() {
 		volumeHandler = &handlers.VolumeHandler{}
 		projectHandler = &handlers.ProjectHandler{}
 		keyPairHandler = &handlers.KeyPairHandler{}
+		floatingIPHandler = &handlers.FloatingIPHandler{}
+		securityGroupHandler = &handlers.SecurityGroupHandler{}
+		subnetHandler = &handlers.SubnetHandler{}
+		routerHandler = &handlers.RouterHandler{}
 	} else {
 		// Create real handlers with OpenStack client
 		networkHandler = handlers.NewNetworkHandler(openStackClient)
 		volumeHandler = handlers.NewVolumeHandler(openStackClient)
 		projectHandler = handlers.NewProjectHandler(openStackClient)
 		keyPairHandler = handlers.NewKeyPairHandler(openStackClient)
+		floatingIPHandler = handlers.NewFloatingIPHandler(openStackClient)
+		securityGroupHandler = handlers.NewSecurityGroupHandler(openStackClient)
+		subnetHandler = handlers.NewSubnetHandler(openStackClient)
+		routerHandler = handlers.NewRouterHandler(openStackClient)
 	}
+
+	// Try to create Supabase client
+	supabaseClient, err = client.NewSupabaseClient()
+	if err != nil {
+		log.Printf("Warning: Failed to create Supabase client: %v", err)
+		log.Println("VPS features will be unavailable")
+		vpsHandler = &handlers.VPSHandler{}
+	} else {
+		// Create VPS handler with Supabase client
+		vpsHandler = handlers.NewVPSHandler(supabaseClient, openStackClient)
+
+		// Start VPS billing cron job
+		go cron.StartVPSBillingCron(supabaseClient)
+	}
+
+	// Try to create PayPal client
+	paypalClient, err = client.NewPayPalClient()
+	if err != nil {
+		log.Printf("Warning: Failed to create PayPal client: %v", err)
+		log.Println("PayPal payment features will be unavailable")
+	} else {
+		// Create PayPal handler with PayPal client
+		paypalHandler = handlers.NewPayPalHandler(paypalClient, supabaseClient, vpsHandler)
+	}
+
+	// Initialize Flutterwave client
+	flutterwaveClient, err := client.GetFlutterwaveClientFromEnv()
+	if err != nil {
+		log.Printf("Failed to initialize Flutterwave client: %v", err)
+	}
+
+	// Initialize Flutterwave handler
+	flutterwaveHandler := handlers.NewFlutterwaveHandler(supabaseClient, flutterwaveClient)
+
+	// Initialize Stripe client
+	stripeClient, err := client.GetStripeClientFromEnv()
+	if err != nil {
+		log.Printf("Failed to initialize Stripe client: %v", err)
+	}
+
+	// Initialize Stripe handler
+	stripeHandler := handlers.NewStripeHandler(supabaseClient, stripeClient)
+
+	// Initialize M-Pesa client
+	mpesaClient, err := client.GetMPesaClientFromEnv()
+	if err != nil {
+		log.Printf("Failed to initialize M-Pesa client: %v", err)
+	}
+
+	// Initialize M-Pesa handler
+	mpesaHandler := handlers.NewMPesaHandler(supabaseClient, mpesaClient)
 
 	// Network routes
 	projectScoped.Get("/networks", func(c *fiber.Ctx) error {
@@ -208,6 +281,30 @@ func main() {
 		}
 		return volumeHandler.DeleteVolume(c)
 	})
+	projectScoped.Post("/volumes/:id/attach", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return volumeHandler.AttachVolume(c)
+	})
+	projectScoped.Post("/volumes/:id/detach", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return volumeHandler.DetachVolume(c)
+	})
+	projectScoped.Put("/volumes/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return volumeHandler.ResizeVolume(c)
+	})
 	projectScoped.Get("/volume-types", func(c *fiber.Ctx) error {
 		if openStackClient == nil {
 			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
@@ -269,6 +366,235 @@ func main() {
 		return keyPairHandler.DeleteKeyPair(c)
 	})
 
+	// Floating IP routes
+	projectScoped.Get("/floating-ips", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return floatingIPHandler.ListFloatingIPs(c)
+	})
+	projectScoped.Post("/floating-ips", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return floatingIPHandler.CreateFloatingIP(c)
+	})
+	projectScoped.Get("/floating-ips/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return floatingIPHandler.GetFloatingIP(c)
+	})
+	projectScoped.Put("/floating-ips/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return floatingIPHandler.UpdateFloatingIP(c)
+	})
+	projectScoped.Delete("/floating-ips/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return floatingIPHandler.DeleteFloatingIP(c)
+	})
+
+	// Security Group routes
+	projectScoped.Get("/security-groups", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return securityGroupHandler.ListSecurityGroups(c)
+	})
+	projectScoped.Get("/security-groups/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return securityGroupHandler.GetSecurityGroup(c)
+	})
+	projectScoped.Post("/security-groups", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return securityGroupHandler.CreateSecurityGroup(c)
+	})
+	projectScoped.Delete("/security-groups/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return securityGroupHandler.DeleteSecurityGroup(c)
+	})
+
+	// Security Group Rule routes
+	projectScoped.Get("/security-group-rules", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return securityGroupHandler.ListSecurityGroupRules(c)
+	})
+	projectScoped.Post("/security-group-rules", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return securityGroupHandler.CreateSecurityGroupRule(c)
+	})
+	projectScoped.Delete("/security-group-rules/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return securityGroupHandler.DeleteSecurityGroupRule(c)
+	})
+
+	// Subnet routes
+	projectScoped.Get("/subnets", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return subnetHandler.ListSubnets(c)
+	})
+	projectScoped.Get("/subnets/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return subnetHandler.GetSubnet(c)
+	})
+	projectScoped.Post("/subnets", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return subnetHandler.CreateSubnet(c)
+	})
+	projectScoped.Delete("/subnets/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return subnetHandler.DeleteSubnet(c)
+	})
+
+	// Router routes
+	projectScoped.Get("/routers", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return routerHandler.ListRouters(c)
+	})
+	projectScoped.Get("/routers/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return routerHandler.GetRouter(c)
+	})
+	projectScoped.Post("/routers", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return routerHandler.CreateRouter(c)
+	})
+	projectScoped.Delete("/routers/:id", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return routerHandler.DeleteRouter(c)
+	})
+	projectScoped.Put("/routers/:id/interfaces", func(c *fiber.Ctx) error {
+		if openStackClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "OpenStack service unavailable",
+			})
+		}
+		return routerHandler.UpdateRouterInterfaces(c)
+	})
+
+	// VPS routes
+	vpsRoutes := projectScoped.Group("/vps")
+	vpsRoutes.Get("/plans", vpsHandler.ListPlans)
+	vpsRoutes.Post("/subscribe", vpsHandler.Subscribe)
+	vpsRoutes.Get("/subscriptions", vpsHandler.ListSubscriptions)
+	vpsRoutes.Post("/subscriptions/:id/cancel", vpsHandler.CancelSubscription)
+
+	// New VPS order and invoice routes
+	vpsRoutes.Post("/order", vpsHandler.CreateOrder)
+	vpsRoutes.Get("/invoice/:id", vpsHandler.GetInvoice)
+	vpsRoutes.Post("/invoice/:id/pay", vpsHandler.PayInvoice)
+	vpsRoutes.Get("/invoices", vpsHandler.ListInvoices)
+
+	// PayPal routes
+	if paypalClient != nil {
+		paypalRoutes := projectScoped.Group("/paypal")
+		paypalRoutes.Post("/create-order", paypalHandler.CreateOrder)
+		paypalRoutes.Post("/capture-order", paypalHandler.CaptureOrder)
+		paypalRoutes.Get("/order/:id", paypalHandler.GetOrderStatus)
+
+		// Webhook endpoint (no authentication required)
+		v1.Post("/paypal/webhook", paypalHandler.HandleWebhook)
+	}
+
+	// Stripe routes
+	if stripeClient != nil {
+		stripeRoutes := projectScoped.Group("/stripe")
+		stripeRoutes.Post("/checkout", stripeHandler.CreateCheckoutSession)
+		stripeRoutes.Post("/subscription", stripeHandler.CreateSubscription)
+		stripeRoutes.Post("/subscription/:id/cancel", stripeHandler.CancelSubscription)
+		stripeRoutes.Post("/webhook", stripeHandler.HandleWebhook)
+	}
+
+	// Flutterwave routes
+	v1.Post("/flutterwave/create-payment", flutterwaveHandler.CreatePayment)
+	v1.Post("/flutterwave/webhook", flutterwaveHandler.HandleWebhook)
+	v1.Get("/flutterwave/verify/:id", flutterwaveHandler.VerifyPayment)
+	v1.Get("/flutterwave/status/:tx_ref", flutterwaveHandler.GetPaymentStatus)
+
+	// M-Pesa routes
+	if mpesaClient != nil {
+		v1.Post("/mpesa/stk-push", mpesaHandler.InitiateSTKPush)
+		v1.Post("/mpesa/callback", mpesaHandler.HandleSTKPushCallback)
+		v1.Post("/mpesa/check-status", mpesaHandler.CheckSTKPushStatus)
+	}
+
+	// Admin routes
+	adminRoutes := protected.Group("/admin")
+	adminRoutes.Use(middleware.AdminRequired())
+	adminRoutes.Post("/vps/billing/run", vpsHandler.RunRenewalBilling)
+
 	// Add a root endpoint that shows API info
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -296,7 +622,7 @@ func main() {
 	// Start server
 	port := cfg.APIPort
 	if port == "" {
-		port = "8080"
+		port = "3070"
 	}
 	log.Printf("Server starting on port %s", port)
 	if err := app.Listen(":" + port); err != nil {

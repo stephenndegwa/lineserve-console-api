@@ -87,3 +87,29 @@ func JWTMiddleware(jwtSecret string) fiber.Handler {
 		return c.Next()
 	}
 }
+
+// IsAdmin checks if the user has admin role
+func IsAdmin(c *fiber.Ctx) bool {
+	role := c.Locals("role")
+	if role == nil {
+		return false
+	}
+
+	// Check if role is admin
+	return role.(string) == "admin"
+}
+
+// AdminRequired is middleware that checks if the user has admin role
+func AdminRequired() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Check if user is admin
+		if !IsAdmin(c) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Admin access required",
+			})
+		}
+
+		// Continue
+		return c.Next()
+	}
+}

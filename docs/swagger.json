@@ -36,6 +36,14 @@
           }
         }
       },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
       "LoginRequest": {
         "type": "object",
         "required": ["username", "password"],
@@ -144,6 +152,45 @@
           }
         }
       },
+      "UpdateInstanceRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "updated-server-name"
+          },
+          "accessIPv4": {
+            "type": "string",
+            "example": "192.168.1.100"
+          },
+          "accessIPv6": {
+            "type": "string",
+            "example": "2001:db8::1"
+          },
+          "hostname": {
+            "type": "string",
+            "example": "server-hostname"
+          }
+        }
+      },
+      "InstanceActionRequest": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "example": "reboot",
+            "description": "Action to perform on the instance",
+            "enum": ["start", "stop", "reboot"]
+          },
+          "type": {
+            "type": "string",
+            "example": "SOFT",
+            "description": "Type of reboot (required only for reboot action)",
+            "enum": ["SOFT", "HARD"]
+          }
+        }
+      },
       "Flavor": {
         "type": "object",
         "properties": {
@@ -174,23 +221,48 @@
         "properties": {
           "id": {
             "type": "string",
-            "example": "550e8400-e29b-41d4-a716-446655440000"
+            "description": "Image ID"
           },
           "name": {
             "type": "string",
-            "example": "Ubuntu 20.04"
+            "description": "Image name"
           },
           "status": {
             "type": "string",
-            "example": "ACTIVE"
-          },
-          "created": {
-            "type": "string",
-            "format": "date-time"
+            "description": "Image status"
           },
           "size": {
             "type": "integer",
-            "example": 1073741824
+            "format": "int64",
+            "description": "Image size in bytes"
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Image visibility (private, public, shared, community)"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Image tags"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Image properties"
           }
         }
       },
@@ -290,12 +362,845 @@
             "example": true
           }
         }
+      },
+      "FloatingIP": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "floating_ip_address": {
+            "type": "string",
+            "example": "192.168.1.100"
+          },
+          "floating_network_id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "status": {
+            "type": "string",
+            "example": "ACTIVE"
+          },
+          "port_id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "fixed_ip_address": {
+            "type": "string",
+            "example": "10.0.0.10"
+          },
+          "router_id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "description": {
+            "type": "string",
+            "example": "My floating IP"
+          },
+          "project_id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T12:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T12:00:00Z"
+          }
+        }
+      },
+      "CreateFloatingIPRequest": {
+        "type": "object",
+        "properties": {
+          "floating_network_id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "ID of the external network to allocate the floating IP from"
+          },
+          "description": {
+            "type": "string",
+            "example": "My floating IP"
+          }
+        }
+      },
+      "UpdateFloatingIPRequest": {
+        "type": "object",
+        "properties": {
+          "port_id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "ID of the port to associate the floating IP with, or null to disassociate"
+          },
+          "fixed_ip_address": {
+            "type": "string",
+            "example": "10.0.0.10",
+            "description": "The fixed IP address to associate with the floating IP"
+          }
+        }
+      },
+      "SecurityGroup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Security group ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Security group name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Security group description"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Project ID"
+          },
+          "created_at": {
+            "type": "string",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "description": "Last update timestamp"
+          },
+          "security_group_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SecurityGroupRule"
+            },
+            "description": "List of security group rules"
+          }
+        }
+      },
+      "CreateSecurityGroupRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Security group name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Security group description"
+          }
+        }
+      },
+      "SecurityGroupRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Security group rule ID"
+          },
+          "direction": {
+            "type": "string",
+            "description": "Direction of traffic (ingress or egress)"
+          },
+          "ethertype": {
+            "type": "string",
+            "description": "Ethertype (IPv4 or IPv6)"
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol (tcp, udp, icmp)"
+          },
+          "port_range_min": {
+            "type": "integer",
+            "description": "Minimum port number"
+          },
+          "port_range_max": {
+            "type": "integer",
+            "description": "Maximum port number"
+          },
+          "remote_ip_prefix": {
+            "type": "string",
+            "description": "Remote IP prefix"
+          },
+          "remote_group_id": {
+            "type": "string",
+            "description": "Remote security group ID"
+          },
+          "security_group_id": {
+            "type": "string",
+            "description": "Security group ID"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Project ID"
+          },
+          "created_at": {
+            "type": "string",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "description": "Last update timestamp"
+          }
+        }
+      },
+      "CreateSecurityGroupRuleRequest": {
+        "type": "object",
+        "required": [
+          "direction",
+          "ethertype",
+          "security_group_id"
+        ],
+        "properties": {
+          "direction": {
+            "type": "string",
+            "description": "Direction of traffic (ingress or egress)"
+          },
+          "ethertype": {
+            "type": "string",
+            "description": "Ethertype (IPv4 or IPv6)"
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol (tcp, udp, icmp)"
+          },
+          "port_range_min": {
+            "type": "integer",
+            "description": "Minimum port number"
+          },
+          "port_range_max": {
+            "type": "integer",
+            "description": "Maximum port number"
+          },
+          "remote_ip_prefix": {
+            "type": "string",
+            "description": "Remote IP prefix"
+          },
+          "remote_group_id": {
+            "type": "string",
+            "description": "Remote security group ID"
+          },
+          "security_group_id": {
+            "type": "string",
+            "description": "Security group ID"
+          }
+        }
+      },
+      "Subnet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Subnet ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Subnet name"
+          },
+          "network_id": {
+            "type": "string",
+            "description": "Network ID"
+          },
+          "cidr": {
+            "type": "string",
+            "description": "CIDR notation"
+          },
+          "gateway_ip": {
+            "type": "string",
+            "description": "Gateway IP address"
+          },
+          "ip_version": {
+            "type": "integer",
+            "description": "IP version (4 or 6)"
+          },
+          "enable_dhcp": {
+            "type": "boolean",
+            "description": "Whether DHCP is enabled"
+          },
+          "dns_nameservers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "DNS nameservers"
+          },
+          "allocation_pools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/AllocationPool"
+            },
+            "description": "Allocation pools"
+          },
+          "host_routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/HostRoute"
+            },
+            "description": "Host routes"
+          },
+          "service_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Service types"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Project ID"
+          },
+          "created_at": {
+            "type": "string",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "description": "Last update timestamp"
+          }
+        }
+      },
+      "AllocationPool": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Start IP address"
+          },
+          "end": {
+            "type": "string",
+            "description": "End IP address"
+          }
+        }
+      },
+      "HostRoute": {
+        "type": "object",
+        "properties": {
+          "destination": {
+            "type": "string",
+            "description": "Destination CIDR"
+          },
+          "nexthop": {
+            "type": "string",
+            "description": "Next hop IP address"
+          }
+        }
+      },
+      "CreateSubnetRequest": {
+        "type": "object",
+        "required": [
+          "network_id",
+          "cidr",
+          "ip_version"
+        ],
+        "properties": {
+          "network_id": {
+            "type": "string",
+            "description": "Network ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Subnet name"
+          },
+          "cidr": {
+            "type": "string",
+            "description": "CIDR notation"
+          },
+          "ip_version": {
+            "type": "integer",
+            "description": "IP version (4 or 6)"
+          },
+          "gateway_ip": {
+            "type": "string",
+            "description": "Gateway IP address"
+          },
+          "enable_dhcp": {
+            "type": "boolean",
+            "description": "Whether DHCP is enabled"
+          },
+          "dns_nameservers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "DNS nameservers"
+          },
+          "allocation_pools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/AllocationPool"
+            },
+            "description": "Allocation pools"
+          },
+          "host_routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/HostRoute"
+            },
+            "description": "Host routes"
+          },
+          "service_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Service types"
+          }
+        }
+      },
+      "Router": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Router ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Router name"
+          },
+          "status": {
+            "type": "string",
+            "description": "Router status"
+          },
+          "admin_state_up": {
+            "type": "boolean",
+            "description": "Admin state up"
+          },
+          "external_gateway_info": {
+            "$ref": "#/definitions/GatewayInfo",
+            "description": "External gateway information"
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Route"
+            },
+            "description": "Routes"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Project ID"
+          },
+          "created_at": {
+            "type": "string",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "description": "Last update timestamp"
+          }
+        }
+      },
+      "GatewayInfo": {
+        "type": "object",
+        "properties": {
+          "network_id": {
+            "type": "string",
+            "description": "Network ID"
+          },
+          "enable_snat": {
+            "type": "boolean",
+            "description": "Whether SNAT is enabled"
+          },
+          "external_fixed_ips": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ExternalFixedIP"
+            },
+            "description": "External fixed IPs"
+          }
+        }
+      },
+      "ExternalFixedIP": {
+        "type": "object",
+        "properties": {
+          "subnet_id": {
+            "type": "string",
+            "description": "Subnet ID"
+          },
+          "ip_address": {
+            "type": "string",
+            "description": "IP address"
+          }
+        }
+      },
+      "Route": {
+        "type": "object",
+        "properties": {
+          "destination": {
+            "type": "string",
+            "description": "Destination CIDR"
+          },
+          "nexthop": {
+            "type": "string",
+            "description": "Next hop IP address"
+          }
+        }
+      },
+      "CreateRouterRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Router name"
+          },
+          "admin_state_up": {
+            "type": "boolean",
+            "description": "Admin state up"
+          },
+          "external_gateway_info": {
+            "$ref": "#/definitions/GatewayInfo",
+            "description": "External gateway information"
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Route"
+            },
+            "description": "Routes"
+          }
+        }
+      },
+      "RouterInterface": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Router ID"
+          },
+          "subnet_id": {
+            "type": "string",
+            "description": "Subnet ID"
+          },
+          "port_id": {
+            "type": "string",
+            "description": "Port ID"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant ID"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Project ID"
+          }
+        }
+      },
+      "RouterInterfaceRequest": {
+        "type": "object",
+        "properties": {
+          "subnet_id": {
+            "type": "string",
+            "description": "Subnet ID"
+          },
+          "port_id": {
+            "type": "string",
+            "description": "Port ID"
+          }
+        }
+      },
+      "VolumeAttachRequest": {
+        "type": "object",
+        "required": ["instance_id"],
+        "properties": {
+          "instance_id": {
+            "type": "string",
+            "description": "ID of the instance to attach the volume to"
+          },
+          "device": {
+            "type": "string",
+            "description": "Device name (e.g., /dev/vdb)"
+          }
+        }
+      },
+      "VolumeDetachRequest": {
+        "type": "object",
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "description": "ID of the attachment to detach (optional, if not provided the first attachment will be detached)"
+          }
+        }
+      },
+      "VolumeAttachment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Attachment ID"
+          },
+          "volume_id": {
+            "type": "string",
+            "description": "Volume ID"
+          },
+          "instance_id": {
+            "type": "string",
+            "description": "Instance ID"
+          },
+          "device": {
+            "type": "string",
+            "description": "Device name"
+          },
+          "status": {
+            "type": "string",
+            "description": "Attachment status"
+          }
+        }
+      },
+      "VolumeResizeRequest": {
+        "type": "object",
+        "required": ["new_size"],
+        "properties": {
+          "new_size": {
+            "type": "integer",
+            "description": "New size in GB (must be larger than current size)"
+          }
+        }
+      },
+      "CreateImageRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Image name"
+          },
+          "container_format": {
+            "type": "string",
+            "description": "Container format (e.g., bare, ovf)"
+          },
+          "disk_format": {
+            "type": "string",
+            "description": "Disk format (e.g., raw, qcow2, vhd)"
+          },
+          "min_disk": {
+            "type": "integer",
+            "description": "Minimum disk size in GB"
+          },
+          "min_ram": {
+            "type": "integer",
+            "description": "Minimum RAM in MB"
+          },
+          "protected": {
+            "type": "boolean",
+            "description": "Whether the image is protected"
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Visibility of the image (private, public, shared, community)"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Image tags"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Image properties"
+          }
+        }
+      },
+      "VPSPlan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "VPS plan ID"
+          },
+          "plan_code": {
+            "type": "string",
+            "example": "LNX-2-4G-80"
+          },
+          "name": {
+            "type": "string",
+            "example": "Micro"
+          },
+          "vcpu": {
+            "type": "integer",
+            "example": 2
+          },
+          "ram_gb": {
+            "type": "integer",
+            "example": 4
+          },
+          "storage_gb": {
+            "type": "integer",
+            "example": 80
+          },
+          "price_monthly": {
+            "type": "number",
+            "format": "float",
+            "example": 19.80
+          },
+          "price_commit_3m": {
+            "type": "number",
+            "format": "float",
+            "example": 18.81
+          },
+          "price_commit_6m": {
+            "type": "number",
+            "format": "float",
+            "example": 17.82
+          },
+          "price_commit_12m": {
+            "type": "number",
+            "format": "float",
+            "example": 16.83
+          },
+          "price_commit_24m": {
+            "type": "number",
+            "format": "float",
+            "example": 15.84
+          },
+          "is_windows_avail": {
+            "type": "boolean",
+            "example": true
+          },
+          "is_backup_avail": {
+            "type": "boolean",
+            "example": true
+          },
+          "is_public_ip_avail": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "VPSOrderRequest": {
+        "type": "object",
+        "required": ["plan_code", "commit_period"],
+        "properties": {
+          "plan_code": {
+            "type": "string",
+            "example": "LNX-2-4G-80"
+          },
+          "commit_period": {
+            "type": "integer",
+            "example": 12,
+            "description": "Commitment period in months (1, 3, 6, 12, or 24)"
+          },
+          "payment_method_id": {
+            "type": "string",
+            "example": "pm_1234"
+          }
+        }
+      },
+      "VPSOrderResponse": {
+        "type": "object",
+        "properties": {
+          "subscription_id": {
+            "type": "string",
+            "example": "sub_xxx"
+          },
+          "invoice_id": {
+            "type": "string",
+            "example": "inv_xxx"
+          },
+          "amount": {
+            "type": "number",
+            "format": "float",
+            "example": 24.81
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD"
+          },
+          "payment_url": {
+            "type": "string",
+            "example": "https://pay.lineserve.net/invoice/inv_xxx"
+          }
+        }
+      },
+      "VPSInvoice": {
+        "type": "object",
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "example": "inv_xxx"
+          },
+          "user_id": {
+            "type": "string",
+            "example": "user_xyz"
+          },
+          "subscription_id": {
+            "type": "string",
+            "example": "sub_xxx"
+          },
+          "plan_code": {
+            "type": "string",
+            "example": "LNX-2-4G-80"
+          },
+          "period_months": {
+            "type": "integer",
+            "example": 12
+          },
+          "amount": {
+            "type": "number",
+            "format": "float",
+            "example": 24.81
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD"
+          },
+          "status": {
+            "type": "string",
+            "example": "unpaid",
+            "enum": ["unpaid", "paid", "failed", "expired"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paid_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VPSInvoicePayRequest": {
+        "type": "object",
+        "required": ["payment_method_id"],
+        "properties": {
+          "payment_method_id": {
+            "type": "string",
+            "example": "pm_1234"
+          }
+        }
+      },
+      "VPSInvoicePayResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "success"
+          },
+          "subscription_id": {
+            "type": "string",
+            "example": "sub_xxx"
+          },
+          "instance_id": {
+            "type": "string",
+            "example": "vm-abcdef"
+          }
+        }
       }
     }
   },
   "security": [
     {
-      "bearerAuth": []
+      "Bearer": []
     }
   ],
   "paths": {
@@ -309,7 +1214,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
+                "$ref": "#/definitions/LoginRequest"
               }
             }
           }
@@ -320,7 +1225,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LoginResponse"
+                  "$ref": "#/definitions/LoginResponse"
                 }
               }
             }
@@ -330,7 +1235,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/definitions/Error"
                 }
               }
             }
@@ -350,7 +1255,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Instance"
+                    "$ref": "#/definitions/Instance"
                   }
                 }
               }
@@ -361,7 +1266,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/definitions/Error"
                 }
               }
             }
@@ -376,7 +1281,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateInstanceRequest"
+                "$ref": "#/definitions/CreateInstanceRequest"
               }
             }
           }
@@ -387,7 +1292,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Instance"
+                  "$ref": "#/definitions/Instance"
                 }
               }
             }
@@ -397,7 +1302,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/definitions/Error"
                 }
               }
             }
@@ -407,7 +1312,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/definitions/Error"
                 }
               }
             }
@@ -436,7 +1341,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Instance"
+                  "$ref": "#/definitions/Instance"
                 }
               }
             }
@@ -446,7 +1351,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/definitions/Error"
                 }
               }
             }
@@ -456,7 +1361,184 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an instance",
+        "tags": ["Instances"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Instance ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Instance deleted successfully"
+          },
+          "404": {
+            "description": "Instance not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an instance",
+        "tags": ["Instances"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Instance ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/definitions/UpdateInstanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Instance updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Instance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Instance not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instances/{id}/action": {
+      "post": {
+        "summary": "Perform an action on an instance",
+        "description": "Perform actions like start, stop, or reboot on an instance",
+        "tags": ["Instances"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Instance ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/definitions/InstanceActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Action performed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Instance not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/definitions/Error"
                 }
               }
             }
@@ -467,10 +1549,12 @@
     "/images": {
       "get": {
         "summary": "List all images",
-        "tags": ["Images"],
+        "tags": ["images"],
+        "description": "Returns a list of all available images",
+        "operationId": "listImages",
         "responses": {
           "200": {
-            "description": "List of images",
+            "description": "Successful operation",
             "content": {
               "application/json": {
                 "schema": {
@@ -487,7 +1571,115 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Upload a new image",
+        "tags": ["images"],
+        "description": "Creates a new image and optionally uploads image data",
+        "operationId": "createImage",
+        "requestBody": {
+          "description": "Image creation request",
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Image file to upload"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the image"
+                  },
+                  "container_format": {
+                    "type": "string",
+                    "description": "Container format (e.g., bare, ovf)",
+                    "default": "bare"
+                  },
+                  "disk_format": {
+                    "type": "string",
+                    "description": "Disk format (e.g., raw, qcow2, vhd)",
+                    "default": "raw"
+                  },
+                  "min_disk": {
+                    "type": "integer",
+                    "description": "Minimum disk size in GB"
+                  },
+                  "min_ram": {
+                    "type": "integer",
+                    "description": "Minimum RAM in MB"
+                  },
+                  "protected": {
+                    "type": "boolean",
+                    "description": "Whether the image is protected"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "description": "Visibility of the image (private, public, shared, community)",
+                    "default": "private"
+                  }
+                },
+                "required": ["name"]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Image created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Image"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -498,7 +1690,7 @@
     "/images/{id}": {
       "get": {
         "summary": "Get image details",
-        "tags": ["Images"],
+        "tags": ["images"],
         "parameters": [
           {
             "name": "id",
@@ -531,12 +1723,88 @@
               }
             }
           },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "images"
+        ],
+        "summary": "Delete an image",
+        "description": "Deletes an image by ID",
+        "operationId": "deleteImage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Image ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Image not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -732,51 +2000,246 @@
         }
       }
     },
-    "/volumes/{id}": {
-      "get": {
-        "summary": "Get volume details",
-        "tags": ["Volumes"],
+    "/volumes/{id}/attach": {
+      "post": {
+        "summary": "Attach volume to instance",
+        "description": "Attaches a volume to an instance",
+        "tags": [
+          "Storage"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
+            "type": "string",
+            "description": "Volume ID"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
             "schema": {
-              "type": "string"
-            },
+              "$ref": "#/components/schemas/VolumeAttachRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Volume attachment details",
+            "schema": {
+              "$ref": "#/components/schemas/VolumeAttachment"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Volume not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/volumes/{id}/detach": {
+      "post": {
+        "summary": "Detach volume from instance",
+        "description": "Detaches a volume from an instance",
+        "tags": [
+          "Storage"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Volume ID"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/VolumeDetachRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Volume detached successfully",
+            "schema": {
+              "$ref": "#/components/schemas/SuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Volume not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/volumes/{id}": {
+      "get": {
+        "summary": "Get volume details",
+        "description": "Returns details of a specific volume",
+        "tags": [
+          "Storage"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
             "description": "Volume ID"
           }
         ],
         "responses": {
           "200": {
             "description": "Volume details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Volume"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Volume not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
+            "schema": {
+              "$ref": "#/components/schemas/Volume"
             }
           },
           "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Volume not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a volume",
+        "description": "Deletes a specific volume",
+        "tags": [
+          "Storage"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Volume ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Volume deleted successfully",
+            "schema": {
+              "$ref": "#/components/schemas/SuccessResponse"
             }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Volume not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update volume properties",
+        "description": "Resize a volume",
+        "tags": [
+          "Storage"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Volume ID"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/VolumeResizeRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Volume resize operation started",
+            "schema": {
+              "$ref": "#/components/schemas/SuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Volume not found"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         }
       }
@@ -850,6 +2313,1221 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/floating-ips": {
+      "get": {
+        "summary": "List all floating IPs",
+        "tags": ["Floating IPs"],
+        "responses": {
+          "200": {
+            "description": "List of floating IPs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FloatingIP"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "OpenStack service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new floating IP",
+        "tags": ["Floating IPs"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFloatingIPRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Floating IP created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloatingIP"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "OpenStack service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/floating-ips/{id}": {
+      "get": {
+        "summary": "Get floating IP details",
+        "tags": ["Floating IPs"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Floating IP ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Floating IP details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloatingIP"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Floating IP not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "OpenStack service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a floating IP (associate/disassociate with instance)",
+        "tags": ["Floating IPs"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Floating IP ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFloatingIPRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Floating IP updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FloatingIP"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Floating IP not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "OpenStack service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Release a floating IP",
+        "tags": ["Floating IPs"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Floating IP ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Floating IP released successfully"
+          },
+          "404": {
+            "description": "Floating IP not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "OpenStack service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/security-groups": {
+      "get": {
+        "summary": "List all security groups",
+        "description": "Returns a list of all security groups for the project",
+        "tags": [
+          "Security Groups"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of security groups",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/SecurityGroup"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new security group",
+        "description": "Creates a new security group",
+        "tags": [
+          "Security Groups"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CreateSecurityGroupRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Security group created successfully",
+            "schema": {
+              "$ref": "#/components/schemas/SecurityGroup"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/security-groups/{id}": {
+      "get": {
+        "summary": "Get security group details",
+        "description": "Returns details of a specific security group",
+        "tags": [
+          "Security Groups"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Security group ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Security group details",
+            "schema": {
+              "$ref": "#/components/schemas/SecurityGroup"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Security group not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a security group",
+        "description": "Deletes a specific security group",
+        "tags": [
+          "Security Groups"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Security group ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Security group deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Security group not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/security-group-rules": {
+      "get": {
+        "summary": "List all security group rules",
+        "description": "Returns a list of all security group rules for the project",
+        "tags": [
+          "Security Groups"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of security group rules",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/SecurityGroupRule"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new security group rule",
+        "description": "Creates a new security group rule",
+        "tags": [
+          "Security Groups"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CreateSecurityGroupRuleRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Security group rule created successfully",
+            "schema": {
+              "$ref": "#/components/schemas/SecurityGroupRule"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/security-group-rules/{id}": {
+      "delete": {
+        "summary": "Delete a security group rule",
+        "description": "Deletes a specific security group rule",
+        "tags": [
+          "Security Groups"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Security group rule ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Security group rule deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Security group rule not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/subnets": {
+      "get": {
+        "summary": "List all subnets",
+        "description": "Returns a list of all subnets for the project",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of subnets",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Subnet"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new subnet",
+        "description": "Creates a new subnet",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CreateSubnetRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Subnet created successfully",
+            "schema": {
+              "$ref": "#/components/schemas/Subnet"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/subnets/{id}": {
+      "get": {
+        "summary": "Get subnet details",
+        "description": "Returns details of a specific subnet",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Subnet ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subnet details",
+            "schema": {
+              "$ref": "#/components/schemas/Subnet"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Subnet not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a subnet",
+        "description": "Deletes a specific subnet",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Subnet ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Subnet deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Subnet not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/routers": {
+      "get": {
+        "summary": "List all routers",
+        "description": "Returns a list of all routers for the project",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of routers",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Router"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new router",
+        "description": "Creates a new router",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CreateRouterRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Router created successfully",
+            "schema": {
+              "$ref": "#/components/schemas/Router"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/routers/{id}": {
+      "get": {
+        "summary": "Get router details",
+        "description": "Returns details of a specific router",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Router ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Router details",
+            "schema": {
+              "$ref": "#/components/schemas/Router"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Router not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a router",
+        "description": "Deletes a specific router",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Router ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Router deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Router not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/routers/{id}/interfaces": {
+      "put": {
+        "summary": "Add or remove router interfaces",
+        "description": "Add or remove interfaces to a router",
+        "tags": [
+          "Networking"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Router ID"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": ["add", "remove"],
+            "default": "add",
+            "description": "Action to perform (add or remove)"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RouterInterfaceRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Router interface updated successfully",
+            "schema": {
+              "$ref": "#/components/schemas/RouterInterface"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Router not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/vps/order": {
+      "post": {
+        "summary": "Create a new VPS order and invoice",
+        "tags": ["VPS"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VPSOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VPSOrderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vps/invoice/{id}": {
+      "get": {
+        "summary": "Get invoice details",
+        "tags": ["VPS"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Invoice ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VPSInvoice"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invoice not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vps/invoice/{id}/pay": {
+      "post": {
+        "summary": "Pay an invoice and provision the VPS",
+        "tags": ["VPS"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Invoice ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VPSInvoicePayRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VPSInvoicePayResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invoice not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vps/invoices": {
+      "get": {
+        "summary": "List all invoices for the authenticated user",
+        "tags": ["VPS"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invoices": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VPSInvoice"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
             "content": {
               "application/json": {
                 "schema": {

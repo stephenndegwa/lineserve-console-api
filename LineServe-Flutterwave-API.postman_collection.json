@@ -1,0 +1,195 @@
+{
+	"info": {
+		"_postman_id": "8a7b5c3d-9e0f-4a12-b345-6c7d8e9f0a1b",
+		"name": "LineServe-Flutterwave-API",
+		"description": "A collection of API endpoints for the LineServe Flutterwave integration.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Flutterwave Payment",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"invoice_id\": \"{{invoice_id}}\",\n    \"email\": \"customer@example.com\",\n    \"name\": \"John Doe\",\n    \"phone_number\": \"1234567890\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/flutterwave/create-payment",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"flutterwave",
+						"create-payment"
+					]
+				},
+				"description": "Creates a payment using Flutterwave for a specific invoice."
+			},
+			"response": []
+		},
+		{
+			"name": "Verify Flutterwave Payment",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/flutterwave/verify/{{transaction_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"flutterwave",
+						"verify",
+						"{{transaction_id}}"
+					]
+				},
+				"description": "Verifies a Flutterwave payment using the transaction ID."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Flutterwave Payment Status",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/flutterwave/status/{{tx_ref}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"flutterwave",
+						"status",
+						"{{tx_ref}}"
+					]
+				},
+				"description": "Gets the status of a Flutterwave payment using the transaction reference."
+			},
+			"response": []
+		},
+		{
+			"name": "Flutterwave Webhook",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "verif-hash",
+						"value": "{{flutterwave_webhook_hash}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"event\": \"charge.completed\",\n    \"data\": {\n        \"id\": 123456789,\n        \"tx_ref\": \"LSFW-12345678-abcdef12\",\n        \"flw_ref\": \"FLW-MOCK-12345678901234567890\",\n        \"amount\": 100.00,\n        \"currency\": \"USD\",\n        \"charged_amount\": 100.00,\n        \"app_fee\": 1.00,\n        \"merchant_fee\": 0.00,\n        \"processor_response\": \"Approved\",\n        \"status\": \"successful\",\n        \"payment_type\": \"card\",\n        \"created_at\": \"2023-01-01T12:00:00Z\",\n        \"meta\": {\n            \"invoice_id\": \"{{invoice_id}}\",\n            \"user_id\": \"{{user_id}}\"\n        },\n        \"customer\": {\n            \"id\": 123456,\n            \"email\": \"customer@example.com\",\n            \"name\": \"John Doe\",\n            \"phone_number\": \"1234567890\"\n        }\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/flutterwave/webhook",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"flutterwave",
+						"webhook"
+					]
+				},
+				"description": "Handles webhook events from Flutterwave."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "your_auth_token_here",
+			"type": "string"
+		},
+		{
+			"key": "invoice_id",
+			"value": "your_invoice_id_here",
+			"type": "string"
+		},
+		{
+			"key": "transaction_id",
+			"value": "your_transaction_id_here",
+			"type": "string"
+		},
+		{
+			"key": "tx_ref",
+			"value": "your_transaction_reference_here",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "your_user_id_here",
+			"type": "string"
+		},
+		{
+			"key": "flutterwave_webhook_hash",
+			"value": "your_flutterwave_webhook_hash_here",
+			"type": "string"
+		}
+	]
+} 

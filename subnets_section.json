@@ -1,0 +1,133 @@
+		{
+			"name": "Subnets",
+			"description": "Endpoints for managing subnets",
+			"item": [
+				{
+					"name": "List Subnets",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/subnets",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"subnets"
+							]
+						},
+						"description": "List all subnets in the project."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Subnet",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"network_id\": \"{{networkId}}\",\n    \"name\": \"test-subnet\",\n    \"cidr\": \"192.168.1.0/24\",\n    \"ip_version\": 4,\n    \"gateway_ip\": \"192.168.1.1\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/v1/subnets",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"subnets"
+							]
+						},
+						"description": "Create a new subnet."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Subnet",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/subnets/{{subnetId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"subnets",
+								"{{subnetId}}"
+							]
+						},
+						"description": "Get details of a specific subnet."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Subnet",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{projectToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v1/subnets/{{subnetId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v1",
+								"subnets",
+								"{{subnetId}}"
+							]
+						},
+						"description": "Delete a subnet."
+					},
+					"response": []
+				}
+			]
+		}

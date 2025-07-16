@@ -195,14 +195,6 @@ func (h *ComputeHandler) ListInstances(c *fiber.Ctx) error {
 
 // CreateInstance creates a new instance
 func (h *ComputeHandler) CreateInstance(c *fiber.Ctx) error {
-	// Get provider from token
-	provider, err := h.getProviderFromToken(c)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
-			Error: fmt.Sprintf("Authentication error: %v", err),
-		})
-	}
-
 	// Parse request body
 	var req models.CreateInstanceRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -211,34 +203,45 @@ func (h *ComputeHandler) CreateInstance(c *fiber.Ctx) error {
 		})
 	}
 
+	// Create instance using internal method
+	instance, err := h.createInstanceInternal(c, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create instance: %v", err),
+		})
+	}
+
+	// Return instance
+	return c.Status(fiber.StatusCreated).JSON(instance)
+}
+
+// createInstanceInternal is an internal method that creates a new instance
+// This can be called by other handlers
+func (h *ComputeHandler) createInstanceInternal(c *fiber.Ctx, req models.CreateInstanceRequest) (*models.Instance, error) {
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
+	if err != nil {
+		return nil, fmt.Errorf("authentication error: %v", err)
+	}
+
 	// Validate required fields
 	if req.Name == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
-			Error: "Name is required",
-		})
+		return nil, fmt.Errorf("name is required")
 	}
 	if req.FlavorID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
-			Error: "FlavorID is required",
-		})
+		return nil, fmt.Errorf("flavorID is required")
 	}
 	if req.ImageID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
-			Error: "ImageID is required",
-		})
+		return nil, fmt.Errorf("imageID is required")
 	}
 	if req.NetworkID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
-			Error: "NetworkID is required",
-		})
+		return nil, fmt.Errorf("networkID is required")
 	}
 
 	// Create compute client
 	computeClient, err := openstack.NewComputeClient(provider)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
-			Error: fmt.Sprintf("Failed to create compute client: %v", err),
-		})
+		return nil, fmt.Errorf("failed to create compute client: %v", err)
 	}
 
 	// Create server
@@ -253,39 +256,37 @@ func (h *ComputeHandler) CreateInstance(c *fiber.Ctx) error {
 		},
 	}
 
-	// Add key pair if provided
+	// Add key name if provided
 	var serverCreateOpts servers.CreateOptsBuilder = createOpts
 	if req.KeyName != "" {
-		// In Gophercloud v2.7.0, we need to use a custom struct that embeds CreateOpts
 		type createOptsWithKeyName struct {
 			servers.CreateOpts
 			KeyName string `json:"key_name,omitempty"`
 		}
-
 		serverCreateOpts = createOptsWithKeyName{
 			CreateOpts: createOpts,
 			KeyName:    req.KeyName,
 		}
 	}
 
-	// Create the server
+	// Create server
 	ctx := context.Background()
 	server, err := servers.Create(ctx, computeClient, serverCreateOpts, nil).Extract()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
-			Error: fmt.Sprintf("Failed to create instance: %v", err),
-		})
+		return nil, fmt.Errorf("failed to create server: %v", err)
 	}
 
-	// Return instance
-	instance := models.Instance{
+	// Convert to our model
+	instance := &models.Instance{
 		ID:      server.ID,
 		Name:    server.Name,
 		Status:  server.Status,
+		Flavor:  req.FlavorID,
+		Image:   req.ImageID,
 		Created: server.Created,
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(instance)
+	return instance, nil
 }
 
 // GetInstance gets an instance by ID
@@ -370,9 +371,9 @@ func (h *ComputeHandler) DeleteInstance(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get ID from params
-	id := c.Params("id")
-	if id == "" {
+	// Get instance ID from URL
+	instanceID := c.Params("id")
+	if instanceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
 			Error: "Instance ID is required",
 		})
@@ -388,7 +389,7 @@ func (h *ComputeHandler) DeleteInstance(c *fiber.Ctx) error {
 
 	// Delete server
 	ctx := context.Background()
-	err = servers.Delete(ctx, computeClient, id).ExtractErr()
+	err = servers.Delete(ctx, computeClient, instanceID).ExtractErr()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
 			Error: fmt.Sprintf("Failed to delete instance: %v", err),
@@ -396,7 +397,177 @@ func (h *ComputeHandler) DeleteInstance(c *fiber.Ctx) error {
 	}
 
 	// Return success
-	return c.SendStatus(fiber.StatusNoContent)
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// UpdateInstance updates an instance by ID
+func (h *ComputeHandler) UpdateInstance(c *fiber.Ctx) error {
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Authentication error: %v", err),
+		})
+	}
+
+	// Get instance ID from URL
+	instanceID := c.Params("id")
+	if instanceID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Instance ID is required",
+		})
+	}
+
+	// Parse request body
+	var req models.UpdateInstanceRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid request body",
+		})
+	}
+
+	// Validate that at least one field is provided
+	if req.Name == nil && req.AccessIPv4 == nil && req.AccessIPv6 == nil && req.Hostname == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "At least one field to update is required",
+		})
+	}
+
+	// Create compute client
+	computeClient, err := openstack.NewComputeClient(provider)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create compute client: %v", err),
+		})
+	}
+
+	// Create update options
+	updateOpts := servers.UpdateOpts{
+		Name:       req.Name,
+		AccessIPv4: req.AccessIPv4,
+		AccessIPv6: req.AccessIPv6,
+		Hostname:   req.Hostname,
+	}
+
+	// Update server
+	ctx := context.Background()
+	server, err := servers.Update(ctx, computeClient, instanceID, updateOpts).Extract()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to update instance: %v", err),
+		})
+	}
+
+	// Convert to our model
+	addresses := make(map[string][]models.Address)
+	for networkName, networkAddresses := range server.Addresses {
+		addrs := []models.Address{}
+		for _, addr := range networkAddresses.([]interface{}) {
+			addrMap := addr.(map[string]interface{})
+			address := models.Address{
+				Type:    addrMap["OS-EXT-IPS:type"].(string),
+				Address: addrMap["addr"].(string),
+			}
+			addrs = append(addrs, address)
+		}
+		addresses[networkName] = addrs
+	}
+
+	// Convert metadata to map[string]interface{} if needed
+	metadata := make(map[string]interface{})
+	for k, v := range server.Metadata {
+		metadata[k] = v
+	}
+
+	instance := models.Instance{
+		ID:        server.ID,
+		Name:      server.Name,
+		Status:    server.Status,
+		Flavor:    server.Flavor["id"].(string),
+		Image:     server.Image["id"].(string),
+		Addresses: addresses,
+		Created:   server.Created,
+		Metadata:  metadata,
+	}
+
+	// Return updated instance
+	return c.JSON(instance)
+}
+
+// PerformInstanceAction performs an action on an instance
+func (h *ComputeHandler) PerformInstanceAction(c *fiber.Ctx) error {
+	// Get provider from token
+	provider, err := h.getProviderFromToken(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Authentication error: %v", err),
+		})
+	}
+
+	// Get instance ID from URL
+	instanceID := c.Params("id")
+	if instanceID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Instance ID is required",
+		})
+	}
+
+	// Parse request body
+	var req models.InstanceActionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid request body",
+		})
+	}
+
+	// Validate action
+	if req.Action == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Action is required",
+		})
+	}
+
+	// Create compute client
+	computeClient, err := openstack.NewComputeClient(provider)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to create compute client: %v", err),
+		})
+	}
+
+	// Perform action
+	ctx := context.Background()
+	var actionErr error
+
+	switch req.Action {
+	case "start":
+		actionErr = servers.Start(ctx, computeClient, instanceID).ExtractErr()
+	case "stop":
+		actionErr = servers.Stop(ctx, computeClient, instanceID).ExtractErr()
+	case "reboot":
+		rebootType := servers.SoftReboot
+		if req.Type == "HARD" {
+			rebootType = servers.HardReboot
+		}
+		actionErr = servers.Reboot(ctx, computeClient, instanceID, servers.RebootOpts{
+			Type: rebootType,
+		}).ExtractErr()
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Unsupported action: %s", req.Action),
+		})
+	}
+
+	if actionErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: fmt.Sprintf("Failed to perform action %s: %v", req.Action, actionErr),
+		})
+	}
+
+	// Return success
+	return c.JSON(models.SuccessResponse{
+		Message: fmt.Sprintf("Action %s performed successfully", req.Action),
+	})
 }
 
 // ListFlavors lists all flavors in the project
