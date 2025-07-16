@@ -1,5 +1,7 @@
 package main
 
+//We should not use gophercloud v1 because it is not maintained and has many issues.
+//We should use gophercloud v2 instead.
 import (
 	"bytes"
 	"encoding/json"
