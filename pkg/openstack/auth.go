@@ -160,7 +160,7 @@ func GetAuthResult(ctx context.Context, provider *gophercloud.ProviderClient) (*
 func GetAdminProvider(ctx context.Context) (*gophercloud.ProviderClient, error) {
 	// Use hardcoded admin credentials for OpenStack
 	authOpts := gophercloud.AuthOptions{
-		IdentityEndpoint: "http://94.130.8.184/identity/v3",
+		IdentityEndpoint: "http://102.209.139.152/identity/v3",
 		Username:         "admin",
 		Password:         "StrongAdminSecret",
 		DomainName:       "Default",
