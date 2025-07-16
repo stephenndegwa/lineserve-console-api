@@ -57,8 +57,8 @@ func (s *FloatingIPService) ListFloatingIPs() ([]models.FloatingIP, error) {
 				RouterID:          fip.RouterID,
 				Description:       fip.Description,
 				ProjectID:         fip.ProjectID,
-				CreatedAt:         fip.CreatedAt,
-				UpdatedAt:         fip.UpdatedAt,
+				CreatedAt:         fip.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				UpdatedAt:         fip.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			}
 			modelFloatingIPs = append(modelFloatingIPs, modelFIP)
 		}
@@ -99,8 +99,8 @@ func (s *FloatingIPService) GetFloatingIP(id string) (*models.FloatingIP, error)
 		RouterID:          fip.RouterID,
 		Description:       fip.Description,
 		ProjectID:         fip.ProjectID,
-		CreatedAt:         fip.CreatedAt,
-		UpdatedAt:         fip.UpdatedAt,
+		CreatedAt:         fip.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:         fip.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelFIP, nil
@@ -138,8 +138,8 @@ func (s *FloatingIPService) CreateFloatingIP(req models.CreateFloatingIPRequest)
 		RouterID:          fip.RouterID,
 		Description:       fip.Description,
 		ProjectID:         fip.ProjectID,
-		CreatedAt:         fip.CreatedAt,
-		UpdatedAt:         fip.UpdatedAt,
+		CreatedAt:         fip.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:         fip.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelFIP, nil
@@ -156,8 +156,11 @@ func (s *FloatingIPService) UpdateFloatingIP(id string, req models.UpdateFloatin
 
 	// Define floating IP update options
 	updateOpts := floatingips.UpdateOpts{
-		PortID:  req.PortID,
-		FixedIP: req.FixedIP,
+		PortID: req.PortID,
+	}
+
+	if req.FixedIP != nil {
+		updateOpts.FixedIP = *req.FixedIP
 	}
 
 	// Update the floating IP
@@ -177,8 +180,8 @@ func (s *FloatingIPService) UpdateFloatingIP(id string, req models.UpdateFloatin
 		RouterID:          fip.RouterID,
 		Description:       fip.Description,
 		ProjectID:         fip.ProjectID,
-		CreatedAt:         fip.CreatedAt,
-		UpdatedAt:         fip.UpdatedAt,
+		CreatedAt:         fip.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:         fip.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelFIP, nil

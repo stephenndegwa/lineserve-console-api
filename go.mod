@@ -11,6 +11,7 @@ require (
 	github.com/gophercloud/gophercloud/v2 v2.7.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
+	github.com/stripe/stripe-go/v72 v72.122.0
 	golang.org/x/crypto v0.33.0
 )
 
@@ -23,7 +24,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/stripe/stripe-go/v72 v72.122.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect

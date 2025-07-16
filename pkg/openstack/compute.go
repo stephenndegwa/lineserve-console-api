@@ -1,9 +1,10 @@
 package openstack
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/v2/openstack/compute/v2/servers"
 	"github.com/lineserve/lineserve-api/pkg/client"
 	"github.com/lineserve/lineserve-api/pkg/models"
 )
@@ -27,7 +28,8 @@ func CreateInstance(client *client.OpenStackClient, projectID, name, flavorID, i
 	}
 
 	// Create the instance
-	server, err := servers.Create(client.Compute, createOpts).Extract()
+	ctx := context.Background()
+	server, err := servers.Create(ctx, client.Compute, createOpts, nil).Extract()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create instance: %v", err)
 	}

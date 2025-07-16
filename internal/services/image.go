@@ -117,10 +117,19 @@ func (s *ImageService) CreateImage(createOpts models.CreateImageRequest) (*model
 		DiskFormat:      createOpts.DiskFormat,
 		MinDisk:         createOpts.MinDisk,
 		MinRAM:          createOpts.MinRAM,
-		Protected:       createOpts.Protected,
-		Visibility:      images.ImageVisibility(createOpts.Visibility),
 		Tags:            createOpts.Tags,
 		Properties:      createOpts.Properties,
+	}
+
+	// Set Protected as pointer if provided
+	if createOpts.Protected {
+		opts.Protected = &createOpts.Protected
+	}
+
+	// Set Visibility as pointer if provided
+	if createOpts.Visibility != "" {
+		visibility := images.ImageVisibility(createOpts.Visibility)
+		opts.Visibility = &visibility
 	}
 
 	// Create the image

@@ -23,6 +23,14 @@ func NewSecurityGroupService(client *client.OpenStackClient) *SecurityGroupServi
 	}
 }
 
+// Helper function to convert int to *int
+func intPtr(i int) *int {
+	if i == 0 {
+		return nil
+	}
+	return &i
+}
+
 // ListSecurityGroups lists all security groups
 func (s *SecurityGroupService) ListSecurityGroups() ([]models.SecurityGroup, error) {
 	// Initialize with empty slice instead of nil
@@ -56,14 +64,14 @@ func (s *SecurityGroupService) ListSecurityGroups() ([]models.SecurityGroup, err
 					Direction:       rule.Direction,
 					EtherType:       rule.EtherType,
 					Protocol:        rule.Protocol,
-					PortRangeMin:    rule.PortRangeMin,
-					PortRangeMax:    rule.PortRangeMax,
+					PortRangeMin:    intPtr(rule.PortRangeMin),
+					PortRangeMax:    intPtr(rule.PortRangeMax),
 					RemoteIPPrefix:  rule.RemoteIPPrefix,
 					RemoteGroupID:   rule.RemoteGroupID,
-					SecurityGroupID: rule.SecurityGroupID,
+					SecurityGroupID: rule.SecGroupID, // Note: Gophercloud uses SecGroupID
 					ProjectID:       rule.ProjectID,
-					CreatedAt:       rule.CreatedAt,
-					UpdatedAt:       rule.UpdatedAt,
+					CreatedAt:       rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+					UpdatedAt:       rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 				}
 			}
 
@@ -72,8 +80,8 @@ func (s *SecurityGroupService) ListSecurityGroups() ([]models.SecurityGroup, err
 				Name:               secGroup.Name,
 				Description:        secGroup.Description,
 				ProjectID:          secGroup.ProjectID,
-				CreatedAt:          secGroup.CreatedAt,
-				UpdatedAt:          secGroup.UpdatedAt,
+				CreatedAt:          secGroup.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				UpdatedAt:          secGroup.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 				SecurityGroupRules: sgRules,
 			}
 			modelSecurityGroups = append(modelSecurityGroups, modelSecGroup)
@@ -112,14 +120,14 @@ func (s *SecurityGroupService) GetSecurityGroup(id string) (*models.SecurityGrou
 			Direction:       rule.Direction,
 			EtherType:       rule.EtherType,
 			Protocol:        rule.Protocol,
-			PortRangeMin:    rule.PortRangeMin,
-			PortRangeMax:    rule.PortRangeMax,
+			PortRangeMin:    intPtr(rule.PortRangeMin),
+			PortRangeMax:    intPtr(rule.PortRangeMax),
 			RemoteIPPrefix:  rule.RemoteIPPrefix,
 			RemoteGroupID:   rule.RemoteGroupID,
-			SecurityGroupID: rule.SecurityGroupID,
+			SecurityGroupID: rule.SecGroupID, // Note: Gophercloud uses SecGroupID
 			ProjectID:       rule.ProjectID,
-			CreatedAt:       rule.CreatedAt,
-			UpdatedAt:       rule.UpdatedAt,
+			CreatedAt:       rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:       rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 	}
 
@@ -129,8 +137,8 @@ func (s *SecurityGroupService) GetSecurityGroup(id string) (*models.SecurityGrou
 		Name:               secGroup.Name,
 		Description:        secGroup.Description,
 		ProjectID:          secGroup.ProjectID,
-		CreatedAt:          secGroup.CreatedAt,
-		UpdatedAt:          secGroup.UpdatedAt,
+		CreatedAt:          secGroup.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:          secGroup.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		SecurityGroupRules: sgRules,
 	}
 
@@ -166,14 +174,14 @@ func (s *SecurityGroupService) CreateSecurityGroup(req models.CreateSecurityGrou
 			Direction:       rule.Direction,
 			EtherType:       rule.EtherType,
 			Protocol:        rule.Protocol,
-			PortRangeMin:    rule.PortRangeMin,
-			PortRangeMax:    rule.PortRangeMax,
+			PortRangeMin:    intPtr(rule.PortRangeMin),
+			PortRangeMax:    intPtr(rule.PortRangeMax),
 			RemoteIPPrefix:  rule.RemoteIPPrefix,
 			RemoteGroupID:   rule.RemoteGroupID,
-			SecurityGroupID: rule.SecurityGroupID,
+			SecurityGroupID: rule.SecGroupID, // Note: Gophercloud uses SecGroupID
 			ProjectID:       rule.ProjectID,
-			CreatedAt:       rule.CreatedAt,
-			UpdatedAt:       rule.UpdatedAt,
+			CreatedAt:       rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:       rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 	}
 
@@ -183,8 +191,8 @@ func (s *SecurityGroupService) CreateSecurityGroup(req models.CreateSecurityGrou
 		Name:               secGroup.Name,
 		Description:        secGroup.Description,
 		ProjectID:          secGroup.ProjectID,
-		CreatedAt:          secGroup.CreatedAt,
-		UpdatedAt:          secGroup.UpdatedAt,
+		CreatedAt:          secGroup.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:          secGroup.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		SecurityGroupRules: sgRules,
 	}
 
@@ -234,14 +242,14 @@ func (s *SecurityGroupService) ListSecurityGroupRules() ([]models.SecurityGroupR
 				Direction:       rule.Direction,
 				EtherType:       rule.EtherType,
 				Protocol:        rule.Protocol,
-				PortRangeMin:    rule.PortRangeMin,
-				PortRangeMax:    rule.PortRangeMax,
+				PortRangeMin:    intPtr(rule.PortRangeMin),
+				PortRangeMax:    intPtr(rule.PortRangeMax),
 				RemoteIPPrefix:  rule.RemoteIPPrefix,
 				RemoteGroupID:   rule.RemoteGroupID,
-				SecurityGroupID: rule.SecurityGroupID,
+				SecurityGroupID: rule.SecGroupID, // Note: Gophercloud uses SecGroupID
 				ProjectID:       rule.ProjectID,
-				CreatedAt:       rule.CreatedAt,
-				UpdatedAt:       rule.UpdatedAt,
+				CreatedAt:       rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				UpdatedAt:       rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			}
 			modelSecurityGroupRules = append(modelSecurityGroupRules, modelRule)
 		}
@@ -256,6 +264,14 @@ func (s *SecurityGroupService) ListSecurityGroupRules() ([]models.SecurityGroupR
 	return modelSecurityGroupRules, nil
 }
 
+// Helper function to convert *int to int for CreateOpts
+func intFromPtr(ptr *int) int {
+	if ptr == nil {
+		return 0
+	}
+	return *ptr
+}
+
 // CreateSecurityGroupRule creates a new security group rule
 func (s *SecurityGroupService) CreateSecurityGroupRule(req models.CreateSecurityGroupRuleRequest) (*models.SecurityGroupRule, error) {
 	ctx := context.Background()
@@ -267,11 +283,11 @@ func (s *SecurityGroupService) CreateSecurityGroupRule(req models.CreateSecurity
 
 	// Define security group rule create options
 	createOpts := rules.CreateOpts{
-		Direction:      req.Direction,
-		EtherType:      req.EtherType,
-		Protocol:       req.Protocol,
-		PortRangeMin:   req.PortRangeMin,
-		PortRangeMax:   req.PortRangeMax,
+		Direction:      rules.RuleDirection(req.Direction),
+		EtherType:      rules.RuleEtherType(req.EtherType),
+		Protocol:       rules.RuleProtocol(req.Protocol),
+		PortRangeMin:   intFromPtr(req.PortRangeMin),
+		PortRangeMax:   intFromPtr(req.PortRangeMax),
 		RemoteIPPrefix: req.RemoteIPPrefix,
 		RemoteGroupID:  req.RemoteGroupID,
 		SecGroupID:     req.SecurityGroupID,
@@ -289,14 +305,14 @@ func (s *SecurityGroupService) CreateSecurityGroupRule(req models.CreateSecurity
 		Direction:       rule.Direction,
 		EtherType:       rule.EtherType,
 		Protocol:        rule.Protocol,
-		PortRangeMin:    rule.PortRangeMin,
-		PortRangeMax:    rule.PortRangeMax,
+		PortRangeMin:    intPtr(rule.PortRangeMin),
+		PortRangeMax:    intPtr(rule.PortRangeMax),
 		RemoteIPPrefix:  rule.RemoteIPPrefix,
 		RemoteGroupID:   rule.RemoteGroupID,
-		SecurityGroupID: rule.SecurityGroupID,
+		SecurityGroupID: rule.SecGroupID, // Note: Gophercloud uses SecGroupID
 		ProjectID:       rule.ProjectID,
-		CreatedAt:       rule.CreatedAt,
-		UpdatedAt:       rule.UpdatedAt,
+		CreatedAt:       rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:       rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelRule, nil

@@ -427,7 +427,7 @@ func (h *ComputeHandler) UpdateInstance(c *fiber.Ctx) error {
 	}
 
 	// Validate that at least one field is provided
-	if req.Name == nil && req.AccessIPv4 == nil && req.AccessIPv6 == nil && req.Hostname == nil {
+	if req.Name == nil && req.AccessIPv4 == nil && req.AccessIPv6 == nil {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
 			Error: "At least one field to update is required",
 		})
@@ -441,12 +441,17 @@ func (h *ComputeHandler) UpdateInstance(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create update options
-	updateOpts := servers.UpdateOpts{
-		Name:       req.Name,
-		AccessIPv4: req.AccessIPv4,
-		AccessIPv6: req.AccessIPv6,
-		Hostname:   req.Hostname,
+	// Create update options - convert pointers to values
+	updateOpts := servers.UpdateOpts{}
+
+	if req.Name != nil {
+		updateOpts.Name = *req.Name
+	}
+	if req.AccessIPv4 != nil {
+		updateOpts.AccessIPv4 = *req.AccessIPv4
+	}
+	if req.AccessIPv6 != nil {
+		updateOpts.AccessIPv6 = *req.AccessIPv6
 	}
 
 	// Update server

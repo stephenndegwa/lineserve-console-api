@@ -128,7 +128,6 @@ type UpdateInstanceRequest struct {
 	Name       *string `json:"name,omitempty"`
 	AccessIPv4 *string `json:"access_ipv4,omitempty"`
 	AccessIPv6 *string `json:"access_ipv6,omitempty"`
-	Hostname   *string `json:"hostname,omitempty"`
 }
 
 // InstanceActionRequest represents a request to perform an action on an instance

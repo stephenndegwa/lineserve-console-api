@@ -49,7 +49,7 @@ func (s *RouterService) ListRouters() ([]models.Router, error) {
 		for _, router := range routerList {
 			// Convert gateway info if it exists
 			var gatewayInfo *models.GatewayInfo
-			if router.GatewayInfo != nil {
+			if router.GatewayInfo.NetworkID != "" {
 				// Convert external fixed IPs
 				externalFixedIPs := make([]models.ExternalFixedIP, len(router.GatewayInfo.ExternalFixedIPs))
 				for i, fixedIP := range router.GatewayInfo.ExternalFixedIPs {
@@ -83,8 +83,8 @@ func (s *RouterService) ListRouters() ([]models.Router, error) {
 				GatewayInfo:  gatewayInfo,
 				Routes:       routes,
 				ProjectID:    router.ProjectID,
-				CreatedAt:    router.CreatedAt,
-				UpdatedAt:    router.UpdatedAt,
+				CreatedAt:    router.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				UpdatedAt:    router.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			}
 			modelRouters = append(modelRouters, modelRouter)
 		}
@@ -116,7 +116,7 @@ func (s *RouterService) GetRouter(id string) (*models.Router, error) {
 
 	// Convert gateway info if it exists
 	var gatewayInfo *models.GatewayInfo
-	if router.GatewayInfo != nil {
+	if router.GatewayInfo.NetworkID != "" {
 		// Convert external fixed IPs
 		externalFixedIPs := make([]models.ExternalFixedIP, len(router.GatewayInfo.ExternalFixedIPs))
 		for i, fixedIP := range router.GatewayInfo.ExternalFixedIPs {
@@ -151,8 +151,8 @@ func (s *RouterService) GetRouter(id string) (*models.Router, error) {
 		GatewayInfo:  gatewayInfo,
 		Routes:       routes,
 		ProjectID:    router.ProjectID,
-		CreatedAt:    router.CreatedAt,
-		UpdatedAt:    router.UpdatedAt,
+		CreatedAt:    router.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:    router.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelRouter, nil
@@ -186,21 +186,11 @@ func (s *RouterService) CreateRouter(req models.CreateRouterRequest) (*models.Ro
 		}
 	}
 
-	// Convert routes
-	routes := make([]routers.Route, len(req.Routes))
-	for i, route := range req.Routes {
-		routes[i] = routers.Route{
-			DestinationCIDR: route.DestinationCIDR,
-			NextHop:         route.NextHop,
-		}
-	}
-
-	// Define router create options
+	// Define router create options (Routes field is not supported in CreateOpts)
 	createOpts := routers.CreateOpts{
 		Name:         req.Name,
 		AdminStateUp: req.AdminStateUp,
 		GatewayInfo:  gatewayInfo,
-		Routes:       routes,
 	}
 
 	// Create the router
@@ -211,7 +201,7 @@ func (s *RouterService) CreateRouter(req models.CreateRouterRequest) (*models.Ro
 
 	// Convert gateway info for response if it exists
 	var respGatewayInfo *models.GatewayInfo
-	if router.GatewayInfo != nil {
+	if router.GatewayInfo.NetworkID != "" {
 		// Convert external fixed IPs for response
 		externalFixedIPs := make([]models.ExternalFixedIP, len(router.GatewayInfo.ExternalFixedIPs))
 		for i, fixedIP := range router.GatewayInfo.ExternalFixedIPs {
@@ -246,8 +236,8 @@ func (s *RouterService) CreateRouter(req models.CreateRouterRequest) (*models.Ro
 		GatewayInfo:  respGatewayInfo,
 		Routes:       respRoutes,
 		ProjectID:    router.ProjectID,
-		CreatedAt:    router.CreatedAt,
-		UpdatedAt:    router.UpdatedAt,
+		CreatedAt:    router.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:    router.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelRouter, nil
@@ -289,11 +279,10 @@ func (s *RouterService) AddRouterInterface(id string, req models.RouterInterface
 
 	// Convert to our model
 	modelRouterInterface := &models.RouterInterface{
-		ID:        routerInterface.ID,
-		SubnetID:  routerInterface.SubnetID,
-		PortID:    routerInterface.PortID,
-		TenantID:  routerInterface.TenantID,
-		ProjectID: routerInterface.ProjectID,
+		ID:       routerInterface.ID,
+		SubnetID: routerInterface.SubnetID,
+		PortID:   routerInterface.PortID,
+		TenantID: routerInterface.TenantID,
 	}
 
 	return modelRouterInterface, nil
@@ -322,11 +311,10 @@ func (s *RouterService) RemoveRouterInterface(id string, req models.RouterInterf
 
 	// Convert to our model
 	modelRouterInterface := &models.RouterInterface{
-		ID:        routerInterface.ID,
-		SubnetID:  routerInterface.SubnetID,
-		PortID:    routerInterface.PortID,
-		TenantID:  routerInterface.TenantID,
-		ProjectID: routerInterface.ProjectID,
+		ID:       routerInterface.ID,
+		SubnetID: routerInterface.SubnetID,
+		PortID:   routerInterface.PortID,
+		TenantID: routerInterface.TenantID,
 	}
 
 	return modelRouterInterface, nil

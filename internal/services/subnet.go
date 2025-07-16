@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gophercloud/gophercloud/v2"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/v2/pagination"
 	"github.com/lineserve/lineserve-api/pkg/client"
@@ -70,7 +71,7 @@ func (s *SubnetService) ListSubnets() ([]models.Subnet, error) {
 				Name:            subnet.Name,
 				NetworkID:       subnet.NetworkID,
 				CIDR:            subnet.CIDR,
-				GatewayIP:       subnet.GatewayIP,
+				GatewayIP:       &subnet.GatewayIP,
 				IPVersion:       subnet.IPVersion,
 				EnableDHCP:      subnet.EnableDHCP,
 				DNSNameservers:  subnet.DNSNameservers,
@@ -78,8 +79,8 @@ func (s *SubnetService) ListSubnets() ([]models.Subnet, error) {
 				HostRoutes:      hostRoutes,
 				ServiceTypes:    subnet.ServiceTypes,
 				ProjectID:       subnet.ProjectID,
-				CreatedAt:       subnet.CreatedAt,
-				UpdatedAt:       subnet.UpdatedAt,
+				CreatedAt:       subnet.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				UpdatedAt:       subnet.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			}
 			modelSubnets = append(modelSubnets, modelSubnet)
 		}
@@ -133,7 +134,7 @@ func (s *SubnetService) GetSubnet(id string) (*models.Subnet, error) {
 		Name:            subnet.Name,
 		NetworkID:       subnet.NetworkID,
 		CIDR:            subnet.CIDR,
-		GatewayIP:       subnet.GatewayIP,
+		GatewayIP:       &subnet.GatewayIP,
 		IPVersion:       subnet.IPVersion,
 		EnableDHCP:      subnet.EnableDHCP,
 		DNSNameservers:  subnet.DNSNameservers,
@@ -141,8 +142,8 @@ func (s *SubnetService) GetSubnet(id string) (*models.Subnet, error) {
 		HostRoutes:      hostRoutes,
 		ServiceTypes:    subnet.ServiceTypes,
 		ProjectID:       subnet.ProjectID,
-		CreatedAt:       subnet.CreatedAt,
-		UpdatedAt:       subnet.UpdatedAt,
+		CreatedAt:       subnet.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:       subnet.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelSubnet, nil
@@ -180,7 +181,7 @@ func (s *SubnetService) CreateSubnet(req models.CreateSubnetRequest) (*models.Su
 		NetworkID:       req.NetworkID,
 		Name:            req.Name,
 		CIDR:            req.CIDR,
-		IPVersion:       req.IPVersion,
+		IPVersion:       gophercloud.IPVersion(req.IPVersion),
 		GatewayIP:       req.GatewayIP,
 		EnableDHCP:      req.EnableDHCP,
 		DNSNameservers:  req.DNSNameservers,
@@ -219,7 +220,7 @@ func (s *SubnetService) CreateSubnet(req models.CreateSubnetRequest) (*models.Su
 		Name:            subnet.Name,
 		NetworkID:       subnet.NetworkID,
 		CIDR:            subnet.CIDR,
-		GatewayIP:       subnet.GatewayIP,
+		GatewayIP:       &subnet.GatewayIP,
 		IPVersion:       subnet.IPVersion,
 		EnableDHCP:      subnet.EnableDHCP,
 		DNSNameservers:  subnet.DNSNameservers,
@@ -227,8 +228,8 @@ func (s *SubnetService) CreateSubnet(req models.CreateSubnetRequest) (*models.Su
 		HostRoutes:      respHostRoutes,
 		ServiceTypes:    subnet.ServiceTypes,
 		ProjectID:       subnet.ProjectID,
-		CreatedAt:       subnet.CreatedAt,
-		UpdatedAt:       subnet.UpdatedAt,
+		CreatedAt:       subnet.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:       subnet.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	return modelSubnet, nil

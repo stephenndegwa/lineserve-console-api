@@ -230,16 +230,8 @@ func (h *ImageHandler) GetImage(c *fiber.Ctx) error {
 
 // CreateImage creates a new image
 func (h *ImageHandler) CreateImage(c *fiber.Ctx) error {
-	// Get provider from token
-	provider, err := h.getProviderFromToken(c)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrorResponse{
-			Error: fmt.Sprintf("Authentication error: %v", err),
-		})
-	}
-
 	// Create OpenStack client
-	openStackClient, err := client.NewOpenStackClient(provider)
+	openStackClient, err := client.NewOpenStackClient()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
 			Error: fmt.Sprintf("Failed to create OpenStack client: %v", err),
